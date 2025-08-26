@@ -5,7 +5,7 @@ description = "FOLIO related niceties for the next generation HTTP client for Py
 authors = [
     {name = "Katherine Bargar", email = "kbargar@fivecolleges.edu"},
 ]
-dependencies = []
+dependencies = ["httpx>=0.20.0", "httpx-retries>=0.4.1"]
 requires-python = ">=3.9"
 readme = "README.md"
 license = {text = "Apache-2.0"}
@@ -49,6 +49,8 @@ mypy-init-return = true
 
 [tool.pdm.scripts]
 test.composite = ["rm -f .coverage", "python -m coverage run -m pytest -vv {args}", "python -m coverage report"]
+lock.composite = ["rm -f pylock.toml", "pdm lock --python=3.9", "pdm lock --lockfile pylock.maximal.toml --python=3.13", "pdm lock --strategy direct_minimal_versions --lockfile pylock.minimal.toml --python=3.9"]
+test-install.composite = ["pdm sync --lockfile=pylock.minimal.toml", "pdm sync --lockfile=pylock.toml"]
 
 [dependency-groups]
 lint = [
