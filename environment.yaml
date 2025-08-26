@@ -6,3 +6,4 @@ channels:
 dependencies:
   - python>=3.9,<3.10
   - pdm==2.25.5
+  - precious==0.9.0
