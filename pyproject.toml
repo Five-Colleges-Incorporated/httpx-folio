@@ -23,6 +23,14 @@ build-backend = "pdm.backend"
 distribution = true
 package-dir = "src"
 
+[tool.pytest.ini_options]
+pythonpath = "src"
+addopts = ["--import-mode=importlib"]
+
+[tool.coverage.run]
+branch = true
+include = ["src/**"]
+
 [tool.mypy]
 python_version = "3.9"
 strict = true
@@ -39,10 +47,17 @@ pydocstyle.convention = "google"
 [tool.ruff.lint.flake8-annotations]
 mypy-init-return = true
 
+[tool.pdm.scripts]
+test.composite = ["rm -f .coverage", "python -m coverage run -m pytest -vv {args}", "python -m coverage report"]
 
 [dependency-groups]
 lint = [
     "ruff==0.12.10",
     "mypy==1.17.1",
     "pre-commit-hooks==6.0.0",
+]
+test = [
+    "pytest==8.4.1",
+    "pytest-cases==3.9.1",
+    "coverage==7.10.5",
 ]
