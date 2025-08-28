@@ -135,6 +135,23 @@ dependencies = [
 ]
 
 [[packages]]
+name = "pytest-asyncio"
+version = "1.1.0"
+requires-python = ">=3.9"
+sdist = {name = "pytest_asyncio-1.1.0.tar.gz", url = "https://files.pythonhosted.org/packages/4e/51/f8794af39eeb870e87a8c8068642fc07bce0c854d6865d7dd0f2a9d338c2/pytest_asyncio-1.1.0.tar.gz", hashes = {sha256 = "796aa822981e01b68c12e4827b8697108f7205020f24b5793b3c41555dab68ea"}}
+wheels = [
+    {name = "pytest_asyncio-1.1.0-py3-none-any.whl",url = "https://files.pythonhosted.org/packages/c7/9d/bf86eddabf8c6c9cb1ea9a869d6873b46f105a5d292d3a6f7071f5b07935/pytest_asyncio-1.1.0-py3-none-any.whl",hashes = {sha256 = "5fe2d69607b0bd75c656d1211f969cadba035030156745ee09e7d71740e58ecf"}},
+]
+marker = "python_version >= \"3.13\" and \"test\" in dependency_groups"
+
+[packages.tool.pdm]
+dependencies = [
+    "backports-asyncio-runner<2,>=1.1; python_version < \"3.11\"",
+    "pytest<9,>=8.2",
+    "typing-extensions>=4.12; python_version < \"3.10\"",
+]
+
+[[packages]]
 name = "pytest-cases"
 version = "3.9.1"
 sdist = {name = "pytest_cases-3.9.1.tar.gz", url = "https://files.pythonhosted.org/packages/c1/69/8b41e074e9e1a9fa85c3765971f213e1b8d4a2f648b457af32dea792bdb8/pytest_cases-3.9.1.tar.gz", hashes = {sha256 = "c4e181f1b525c931a318d4812fa8de656c2c8fb77fccf1571ecf0cc5fe8e7f8f"}}
@@ -471,7 +488,7 @@ dependencies = [
 ]
 
 [tool.pdm]
-hashes = {sha256 = "08f34206884a6d54430fb01566e454bb24502bd10403771f0d487474febfd5d3"}
+hashes = {sha256 = "ec69edba2fc62295d73428fb3c91f6c01da940a68cac60acbb98b1989012e24a"}
 strategy = ["inherit_metadata", "static_urls"]
 
 [[tool.pdm.targets]]
