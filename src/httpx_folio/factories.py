@@ -3,12 +3,14 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Callable
+from typing import Protocol
 
 import httpx
 from httpx_retries import Retry, RetryTransport
 
 from .auth import FolioParams, RefreshTokenAuth
+
+__all__ = ["FolioParams"]
 
 
 def _httpx_default_timeout() -> httpx._types.TimeoutTypes:
@@ -23,9 +25,17 @@ class BasicClientOptions:
     timeout: httpx._types.TimeoutTypes = field(default_factory=_httpx_default_timeout)
 
 
+class BasicClientFactory(Protocol):
+    """Client factory for a single-tenant with default HTTPX options."""
+
+    def __call__(self, o: BasicClientOptions = ..., /) -> httpx.Client:
+        """Callable with or without BasicClientOptions."""
+        ...
+
+
 def default_client_factory(
     params: FolioParams,
-) -> Callable[[BasicClientOptions | None], httpx.Client]:
+) -> BasicClientFactory:
     """Factory method for creating a single tenant client with no customizations.
 
     Returns:
@@ -35,8 +45,10 @@ def default_client_factory(
         httpx.HTTPError: When the provided params do not connect to FOLIO.
 
     Examples:
-        from httpx_folio.auth import FolioParams
-        from httpx_folio.factories import make_client_factory
+        from httpx_folio.factories import (
+            FolioParams,
+            default_client_factory as make_client_factory,
+        )
 
         client_factory = make_client_factory(FolioParams(
             'https://folio-etesting-snapshot-kong.ci.folio.org',
@@ -50,12 +62,20 @@ def default_client_factory(
 
     """
     auth = RefreshTokenAuth(params)
-    return lambda o: httpx.Client(
-        auth=auth,
-        base_url=params.base_url,
-        transport=RetryTransport(
-            retry=Retry(total=(o or BasicClientOptions()).retries, backoff_factor=0.5),
-        ),
-        timeout=(o or BasicClientOptions()).timeout,
-        headers={"x-okapi-tenant": params.auth_tenant},
-    )
+
+    def factory(o: BasicClientOptions | None = None) -> httpx.Client:
+        o = o or BasicClientOptions()
+        return httpx.Client(
+            auth=auth,
+            base_url=params.base_url,
+            transport=RetryTransport(
+                retry=Retry(
+                    total=o.retries,
+                    backoff_factor=0.5,
+                ),
+            ),
+            timeout=o.timeout,
+            headers={"x-okapi-tenant": params.auth_tenant},
+        )
+
+    return factory
