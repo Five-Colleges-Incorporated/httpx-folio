@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from unittest.mock import MagicMock, patch
 
 import httpx
 import pytest
@@ -71,3 +72,51 @@ class TestIntegration:
         params = [*params[: tc.index], tc.value, *params[tc.index + 1 :]]
         with pytest.raises(tc.expected):
             uut(FolioParams(*params))
+
+
+@patch("httpx_folio.auth.httpx.post")
+def test_refreshes(auth_mock: MagicMock) -> None:
+    from httpx_folio.auth import FolioParams, RefreshTokenAuth
+
+    auth_mock.return_value.cookies.__getitem__.return_value = "token"
+
+    uut = RefreshTokenAuth(
+        FolioParams(
+            "https://base_url/",
+            "auth_tenant",
+            "username",
+            "password",
+        ),
+    )
+    auth_mock.reset_mock()
+
+    call_count = 0
+
+    def mock_refresh(req: httpx.Request) -> httpx.Response:
+        nonlocal call_count
+        call_count += 1
+        res = httpx.Response(401 if call_count % 5 == 0 else 200)
+        res.request = req
+        return res
+
+    with httpx.Client(
+        auth=uut,
+        transport=httpx.MockTransport(handler=mock_refresh),
+    ) as test_client:
+        for _ in range(100):
+            res = test_client.get("http://url")
+            res.raise_for_status()
+
+    # we're calling 100 times but there will be bonus calls because token refresh
+    assert call_count > 100
+    assert len(auth_mock.call_args_list) == (call_count - 100)
+
+    expected_authn = "https://base_url/authn/login-with-expiry"
+    expected_headers = {"x-okapi-tenant": "auth_tenant"}
+    expected_creds = {"username": "username", "password": "password"}
+    assert all(
+        c[0][0] == expected_authn
+        and c.kwargs["headers"] == expected_headers
+        and c.kwargs["json"] == expected_creds
+        for c in auth_mock.call_args_list
+    )
