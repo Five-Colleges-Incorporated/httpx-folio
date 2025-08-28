@@ -120,3 +120,32 @@ def test_refreshes(auth_mock: MagicMock) -> None:
         and c.kwargs["json"] == expected_creds
         for c in auth_mock.call_args_list
     )
+
+
+@patch("httpx_folio.auth.httpx.post")
+async def test_refreshes_async(auth_mock: MagicMock) -> None:
+    from httpx_folio.auth import FolioParams, RefreshTokenAuth
+
+    auth_mock.return_value.cookies.__getitem__.return_value = "token"
+
+    uut = RefreshTokenAuth(
+        FolioParams(
+            "https://base_url/",
+            "auth_tenant",
+            "username",
+            "password",
+        ),
+    )
+    auth_mock.reset_mock()
+
+    def mock_refresh(req: httpx.Request) -> httpx.Response:
+        res = httpx.Response(401)
+        res.request = req
+        return res
+
+    async with httpx.AsyncClient(
+        auth=uut,
+        transport=httpx.MockTransport(handler=mock_refresh),
+    ) as test_client:
+        with pytest.raises(RuntimeError):
+            await test_client.get("http://url")
