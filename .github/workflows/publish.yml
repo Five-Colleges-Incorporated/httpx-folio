@@ -38,7 +38,7 @@ jobs:
     runs-on: ubuntu-latest
     environment:
       name: pypi
-      url: https://pypi.org/p/folio-user-bulk-edit
+      url: https://pypi.org/p/httpx-folio
     permissions:
       id-token: write
 
@@ -100,7 +100,7 @@ jobs:
     runs-on: ubuntu-latest
     environment:
       name: testpypi
-      url: https://test.pypi.org/p/folio-user-bulk-edit
+      url: https://test.pypi.org/p/httpx-folio
     permissions:
       id-token: write
 
