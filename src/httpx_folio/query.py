@@ -1,0 +1,44 @@
+"""A compatibility layer over FOLIO query parameters."""
+
+from __future__ import annotations
+
+import httpx
+
+
+class QueryParams:
+    """An container for generating query parameters."""
+
+    def __init__(
+        self,
+        query: str | None = None,
+        limit: int = 100,
+    ):
+        """Initializes a base set of query parameters to generate variations."""
+        self._query = query
+        self._limit = limit
+
+    def normalized(self) -> httpx.QueryParams:
+        """Parameters compatible with all FOLIO endpoints.
+
+        Different endpoints have different practices for sorting and filtering.
+        The biggest change is between ERM and non-ERM. This will duplicate the
+        parameters to work across both (and more as they're discovered).
+
+        This also normalizes the return values of the ERM endpoints which by default
+        to not return stats making them a different shape than other endpoints.
+        """
+        # fortunately FOLIO doesn't seem to mind passing all variations of parameters
+        return httpx.QueryParams(
+            {
+                # Most endpoints use query,
+                # only some are ok without cql.allRecords they're all ok with it
+                "query": self._query if self._query is not None else "cql.allRecords=1",
+                # ERM uses the filters property, it is fine without a cql.allRecords
+                "filters": self._query,
+                # limit and perPage seem to be the only parameters limiting results
+                "limit": self._limit,
+                "perPage": self._limit,
+                # ERM doesn't return the allRecords count unless stats is passed
+                "stats": True,
+            },
+        )
