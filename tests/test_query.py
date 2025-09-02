@@ -65,7 +65,7 @@ class NormalizedCase:
     expected_limit: str | None = None
     expected_perPage: str | None = None  # noqa: N815
 
-    expected_keys: set[str] = field(default_factory=set)
+    additional_keys: set[str] = field(default_factory=set)
 
 
 class NormalizedCases:
@@ -74,7 +74,7 @@ class NormalizedCases:
             expected_query="cql.allRecords=1",
             expected_limit=str(DEFAULT_PAGE_SIZE),
             expected_perPage=str(DEFAULT_PAGE_SIZE),
-            expected_keys={"stats"},
+            additional_keys={"stats"},
         )
 
     def case_largepage(self) -> NormalizedCase:
@@ -83,7 +83,7 @@ class NormalizedCases:
             expected_query="cql.allRecords=1",
             expected_limit="10000",
             expected_perPage="10000",
-            expected_keys={"stats"},
+            additional_keys={"stats"},
         )
 
     def case_simple_query(self) -> NormalizedCase:
@@ -93,7 +93,7 @@ class NormalizedCases:
             expected_filters="simple query",
             expected_limit=str(DEFAULT_PAGE_SIZE),
             expected_perPage=str(DEFAULT_PAGE_SIZE),
-            expected_keys={"stats"},
+            additional_keys={"stats"},
         )
 
     def case_cql(self) -> NormalizedCase:
@@ -112,17 +112,18 @@ def test_normalized(tc: NormalizedCase) -> None:
         uut(tc.query) if tc.limit is None else uut(tc.query, tc.limit)
     ).normalized()
 
+    expected_keys = tc.additional_keys
     if tc.expected_query is not None:
-        tc.expected_keys.add("query")
+        expected_keys.add("query")
         assert actual["query"] == tc.expected_query
     if tc.expected_filters is not None:
-        tc.expected_keys.add("filters")
+        expected_keys.add("filters")
         assert actual["filters"] == tc.expected_filters
     if tc.expected_limit is not None:
-        tc.expected_keys.add("limit")
+        expected_keys.add("limit")
         assert actual["limit"] == tc.expected_limit
     if tc.expected_perPage is not None:
-        tc.expected_keys.add("perPage")
+        expected_keys.add("perPage")
         assert actual["perPage"] == tc.expected_perPage
 
-    assert set(actual.keys()) - set(tc.expected_keys) == set()
+    assert set(actual.keys()) - set(expected_keys) == set()
