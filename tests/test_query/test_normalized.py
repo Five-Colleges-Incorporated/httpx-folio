@@ -26,6 +26,17 @@ class NormalizedCases:
             ),
         )
 
+    def case_additional_params(self) -> NormalizedCase:
+        return NormalizedCase(
+            query={"additional": "param1", "and": "param2"},
+            expected=httpx.QueryParams(
+                "query=cql.allRecords=1"
+                "&additional=param1&and=param2"
+                f"&limit={DEFAULT_PAGE_SIZE}&perPage={DEFAULT_PAGE_SIZE}"
+                "&stats=true",
+            ),
+        )
+
     def case_largepage(self) -> NormalizedCase:
         return NormalizedCase(
             limit=10000,
@@ -63,6 +74,23 @@ class NormalizedCases:
             query=query,
             expected=httpx.QueryParams(
                 f"query=simple query&limit={DEFAULT_PAGE_SIZE}",
+            ),
+        )
+
+    @parametrize(
+        query=[
+            {"sort": "id;asc"},
+            httpx.QueryParams({"sort": "id;asc"}),
+        ],
+    )
+    def case_erm_params(
+        self,
+        query: QueryType,
+    ) -> NormalizedCase:
+        return NormalizedCase(
+            query=query,
+            expected=httpx.QueryParams(
+                f"sort=id;asc&perPage={DEFAULT_PAGE_SIZE}&stats=true",
             ),
         )
 

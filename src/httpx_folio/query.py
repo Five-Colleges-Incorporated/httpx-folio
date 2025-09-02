@@ -83,6 +83,23 @@ class _QueryParser:
         msg = f"Unexpected value {self.query['filters']} for filter parameter."
         raise ValueError(msg)
 
+    def check_erm(self) -> bool:
+        return (
+            isinstance(self.query, (dict, httpx.QueryParams)) and "sort" in self.query
+        )
+
+    _reserved = frozenset({"query", "filters", "limit", "perPage", "stats"})
+
+    def additional_params(self) -> httpx.QueryParams:
+        if not isinstance(self.query, (dict, httpx.QueryParams)):
+            return httpx.QueryParams()
+
+        query = httpx.QueryParams(self.query)
+        if isinstance(query, httpx.QueryParams):
+            for r in self._reserved:
+                query = query.remove(r)
+        return query
+
 
 class QueryParams:
     """An container for generating query parameters."""
@@ -102,9 +119,11 @@ class QueryParams:
         self._is_cql: bool | None = None
 
         if query is None:
+            self._additional_params = httpx.QueryParams()
             return
 
         parser = _QueryParser(query)
+        self._additional_params = parser.additional_params()
 
         (q, is_cql) = parser.check_string()
         if q is not None:
@@ -126,6 +145,10 @@ class QueryParams:
             self._is_erm = True
             self._is_cql = False
 
+        if parser.check_erm():
+            self._is_erm = True
+            self._is_cql = False
+
     def normalized(self) -> httpx.QueryParams:
         """Parameters compatible with all FOLIO endpoints.
 
@@ -136,7 +159,7 @@ class QueryParams:
         This also normalizes the return values of the ERM endpoints which by default
         to not return stats making them a different shape than other endpoints.
         """
-        params = httpx.QueryParams()
+        params = self._additional_params
         # add cql params if it is or might be cql
         if self._is_cql is None or self._is_cql:
             params = params.merge(
