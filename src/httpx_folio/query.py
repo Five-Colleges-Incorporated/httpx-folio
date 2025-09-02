@@ -186,3 +186,24 @@ class QueryParams:
                 },
             )
         return params
+
+    def stats(self) -> httpx.QueryParams:
+        """Parameters for a single row to get the shape and totalRecord count.
+
+        Zero or One records will be returned regardless of the endpoint's
+        sorting/filtering practices.
+        """
+        params = self.normalized()
+        # add a sort so null records go to the end
+        if "query" in params and "sortBy" not in params["query"]:
+            params = params.set("query", params["query"] + " sortBy id")
+        if ("sort" not in params) and (self._is_erm is None or self._is_erm):
+            params = params.add("sort", "id;asc")
+
+        # override the limit
+        if "limit" in params:
+            params = params.set("limit", 1)
+        if "perPage" in params:
+            params = params.set("perPage", 1)
+
+        return params

@@ -51,3 +51,10 @@ class TestIntegration:
             j = res.json()
             assert j["totalRecords"] > 1
             assert len(j[next(iter(j.keys()))])
+
+            res = client.get(tc.endpoint, params=uut(tc.query).stats())
+            res.raise_for_status()
+
+            j = res.json()
+            assert j["totalRecords"] > 1
+            assert len(j[next(iter(j.keys()))])
