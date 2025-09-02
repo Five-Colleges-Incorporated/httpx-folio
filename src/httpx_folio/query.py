@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import httpx
 
+DEFAULT_PAGE_SIZE = 100
+
 
 class QueryParams:
     """An container for generating query parameters."""
@@ -11,7 +13,7 @@ class QueryParams:
     def __init__(
         self,
         query: str | None = None,
-        limit: int = 100,
+        limit: int = DEFAULT_PAGE_SIZE,
     ):
         """Initializes a base set of query parameters to generate variations."""
         self._query = query
@@ -27,14 +29,11 @@ class QueryParams:
         This also normalizes the return values of the ERM endpoints which by default
         to not return stats making them a different shape than other endpoints.
         """
-        # fortunately FOLIO doesn't seem to mind passing all variations of parameters
-        return httpx.QueryParams(
+        params = httpx.QueryParams(
             {
                 # Most endpoints use query,
                 # only some are ok without cql.allRecords they're all ok with it
                 "query": self._query if self._query is not None else "cql.allRecords=1",
-                # ERM uses the filters property, it is fine without a cql.allRecords
-                "filters": self._query,
                 # limit and perPage seem to be the only parameters limiting results
                 "limit": self._limit,
                 "perPage": self._limit,
@@ -42,3 +41,7 @@ class QueryParams:
                 "stats": True,
             },
         )
+        if self._query is not None:
+            # ERM uses the filters property, it is fine without a cql.allRecords
+            params = params.add("filters", self._query)
+        return params
