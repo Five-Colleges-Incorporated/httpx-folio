@@ -25,6 +25,7 @@ QueryType = Union[
 
 class _QueryParser:
     _cql_re = re.compile(r"^.*sortby.*$", re.IGNORECASE)
+    _sort_re = re.compile(r"^.*sortby.*$", re.IGNORECASE)
 
     def __init__(self, query: QueryType):
         self.query = query
@@ -88,6 +89,19 @@ class _QueryParser:
             isinstance(self.query, (dict, httpx.QueryParams)) and "sort" in self.query
         )
 
+    def check_sort(self) -> bool:
+        if isinstance(self.query, str):
+            return self._sort_re.match(self.query) is not None
+
+        if isinstance(self.query, (dict, httpx.QueryParams)):
+            if q := self.query.get("query", None):
+                return isinstance(q, str) and self._sort_re.match(q) is not None
+
+            if "sort" in self.query:
+                return True
+
+        return False
+
     _reserved = frozenset({"query", "filters", "limit", "perPage", "stats"})
 
     def additional_params(self) -> httpx.QueryParams:
@@ -117,6 +131,7 @@ class QueryParams:
         self._query: list[str] = []
         self._is_erm: bool | None = None
         self._is_cql: bool | None = None
+        self._is_sorted = False
 
         if query is None:
             self._additional_params = httpx.QueryParams()
@@ -148,6 +163,9 @@ class QueryParams:
         if parser.check_erm():
             self._is_erm = True
             self._is_cql = False
+
+        if parser.check_sort():
+            self._is_sorted = True
 
     def normalized(self) -> httpx.QueryParams:
         """Parameters compatible with all FOLIO endpoints.
@@ -195,7 +213,7 @@ class QueryParams:
         """
         params = self.normalized()
         # add a sort so null records go to the end
-        if "query" in params and "sortBy" not in params["query"]:
+        if "query" in params and not self._is_sorted:
             params = params.set("query", params["query"] + " sortBy id")
         if ("sort" not in params) and (self._is_erm is None or self._is_erm):
             params = params.add("sort", "id;asc")
