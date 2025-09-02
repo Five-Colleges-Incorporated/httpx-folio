@@ -1,10 +1,11 @@
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 
-from pytest_cases import parametrize_with_cases
+import httpx
+from pytest_cases import parametrize, parametrize_with_cases
 
-from httpx_folio.query import DEFAULT_PAGE_SIZE
+from httpx_folio.query import DEFAULT_PAGE_SIZE, QueryType
 
 
 @dataclass(frozen=True)
@@ -57,50 +58,80 @@ class TestIntegration:
 
 @dataclass(frozen=True)
 class NormalizedCase:
-    query: str | None = None
-    expected_query: str | None = None
-    expected_filters: str | None = None
+    expected: httpx.QueryParams
 
+    query: QueryType | None = None
     limit: int | None = None
-    expected_limit: str | None = None
-    expected_perPage: str | None = None  # noqa: N815
-
-    additional_keys: set[str] = field(default_factory=set)
 
 
 class NormalizedCases:
     def case_default(self) -> NormalizedCase:
         return NormalizedCase(
-            expected_query="cql.allRecords=1",
-            expected_limit=str(DEFAULT_PAGE_SIZE),
-            expected_perPage=str(DEFAULT_PAGE_SIZE),
-            additional_keys={"stats"},
+            expected=httpx.QueryParams(
+                "query=cql.allRecords=1"
+                f"&limit={DEFAULT_PAGE_SIZE}&perPage={DEFAULT_PAGE_SIZE}"
+                "&stats=true",
+            ),
         )
 
     def case_largepage(self) -> NormalizedCase:
         return NormalizedCase(
             limit=10000,
-            expected_query="cql.allRecords=1",
-            expected_limit="10000",
-            expected_perPage="10000",
-            additional_keys={"stats"},
+            expected=httpx.QueryParams(
+                "query=cql.allRecords=1&limit=10000&perPage=10000&stats=true",
+            ),
         )
 
     def case_simple_query(self) -> NormalizedCase:
         return NormalizedCase(
             query="simple query",
-            expected_query="simple query",
-            expected_filters="simple query",
-            expected_limit=str(DEFAULT_PAGE_SIZE),
-            expected_perPage=str(DEFAULT_PAGE_SIZE),
-            additional_keys={"stats"},
+            expected=httpx.QueryParams(
+                "query=simple query&filters=simple query"
+                f"&limit={DEFAULT_PAGE_SIZE}&perPage={DEFAULT_PAGE_SIZE}"
+                "&stats=true",
+            ),
         )
 
     def case_cql(self) -> NormalizedCase:
         return NormalizedCase(
             query="simple query sortBy index",
-            expected_query="simple query sortBy index",
-            expected_limit=str(DEFAULT_PAGE_SIZE),
+            expected=httpx.QueryParams(
+                f"query=simple query sortBy index&limit={DEFAULT_PAGE_SIZE}",
+            ),
+        )
+
+    @parametrize(
+        query=[
+            {"filters": "one filter"},
+            httpx.QueryParams({"filters": "one filter"}),
+        ],
+    )
+    def case_erm_one_filter(
+        self,
+        query: QueryType,
+    ) -> NormalizedCase:
+        return NormalizedCase(
+            query=query,
+            expected=httpx.QueryParams(
+                f"filters=one filter&perPage={DEFAULT_PAGE_SIZE}&stats=true",
+            ),
+        )
+
+    @parametrize(
+        query=[
+            {"filters": ["two", "filters"]},
+            httpx.QueryParams({"filters": ["two", "filters"]}),
+        ],
+    )
+    def case_erm_multiple_filter(
+        self,
+        query: QueryType,
+    ) -> NormalizedCase:
+        return NormalizedCase(
+            query=query,
+            expected=httpx.QueryParams(
+                f"filters=two&filters=filters&perPage={DEFAULT_PAGE_SIZE}&stats=true",
+            ),
         )
 
 
@@ -112,18 +143,4 @@ def test_normalized(tc: NormalizedCase) -> None:
         uut(tc.query) if tc.limit is None else uut(tc.query, tc.limit)
     ).normalized()
 
-    expected_keys = tc.additional_keys
-    if tc.expected_query is not None:
-        expected_keys.add("query")
-        assert actual["query"] == tc.expected_query
-    if tc.expected_filters is not None:
-        expected_keys.add("filters")
-        assert actual["filters"] == tc.expected_filters
-    if tc.expected_limit is not None:
-        expected_keys.add("limit")
-        assert actual["limit"] == tc.expected_limit
-    if tc.expected_perPage is not None:
-        expected_keys.add("perPage")
-        assert actual["perPage"] == tc.expected_perPage
-
-    assert set(actual.keys()) - set(expected_keys) == set()
+    assert actual == tc.expected
