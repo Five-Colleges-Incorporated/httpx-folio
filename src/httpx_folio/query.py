@@ -141,7 +141,7 @@ class QueryParams:
         if self._is_cql is None or self._is_cql:
             params = params.merge(
                 {
-                    # Most endpoints use query,
+                    # CQL endpoints use query,
                     # only some are ok without cql.allRecords but they're all ok with it
                     "query": self._query[0]
                     if len(self._query) == 1

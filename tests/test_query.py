@@ -92,11 +92,25 @@ class NormalizedCases:
             ),
         )
 
-    def case_cql(self) -> NormalizedCase:
+    def case_cql_str(self) -> NormalizedCase:
         return NormalizedCase(
             query="simple query sortBy index",
             expected=httpx.QueryParams(
                 f"query=simple query sortBy index&limit={DEFAULT_PAGE_SIZE}",
+            ),
+        )
+
+    @parametrize(
+        query=[
+            {"query": "simple query"},
+            httpx.QueryParams({"query": "simple query"}),
+        ],
+    )
+    def case_cql_params(self, query: QueryType) -> NormalizedCase:
+        return NormalizedCase(
+            query=query,
+            expected=httpx.QueryParams(
+                f"query=simple query&limit={DEFAULT_PAGE_SIZE}",
             ),
         )
 
