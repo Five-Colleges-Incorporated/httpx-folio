@@ -96,6 +96,13 @@ class NormalizedCases:
             expected_keys={"stats"},
         )
 
+    def case_cql(self) -> NormalizedCase:
+        return NormalizedCase(
+            query="simple query sortBy index",
+            expected_query="simple query sortBy index",
+            expected_limit=str(DEFAULT_PAGE_SIZE),
+        )
+
 
 @parametrize_with_cases("tc", cases=NormalizedCases)
 def test_normalized(tc: NormalizedCase) -> None:
