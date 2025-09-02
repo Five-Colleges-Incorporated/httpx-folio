@@ -23,6 +23,67 @@ QueryType = Union[
 ]
 
 
+class _QueryParser:
+    _cql_re = re.compile(r"^.*sortby.*$", re.IGNORECASE)
+
+    def __init__(self, query: QueryType):
+        self.query = query
+
+    def check_string(self) -> tuple[str | None, bool]:
+        return (
+            (None, False)
+            if not isinstance(self.query, str)
+            else (self.query, self._cql_re.match(self.query) is not None)
+        )
+
+    def check_query(self) -> str | None:
+        if (
+            not isinstance(self.query, (dict, httpx.QueryParams))
+            or "query" not in self.query
+        ):
+            return None
+
+        if isinstance(self.query, dict):
+            if q := self.query["query"]:
+                if not isinstance(q, str):
+                    msg = f"Unexpected value {q} for query parameter."
+                    raise ValueError(msg)
+                return q
+            return None
+
+        if qs := self.query.get_list("query"):
+            if len(qs) == 0:
+                return None
+            if len(qs) == 1 and isinstance(qs[0], str):
+                return qs[0]
+
+        msg = f"Unexpected value {self.query['query']} for query parameter."
+        raise ValueError(msg)
+
+    def check_filters(self) -> list[str] | None:
+        if (
+            not isinstance(self.query, (dict, httpx.QueryParams))
+            or "filters" not in self.query
+        ):
+            return None
+
+        filters = []
+        if isinstance(self.query, httpx.QueryParams):
+            filters = self.query.get_list("filters")
+        else:
+            q = self.query["filters"]
+            if isinstance(q, str):
+                filters = [q]
+            elif isinstance(q, Sequence):
+                filters = list(cast("Sequence[str]", self.query["filters"]))
+
+        if all(isinstance(v, str) for v in filters):
+            return filters
+
+        msg = f"Unexpected value {self.query['filters']} for filter parameter."
+        raise ValueError(msg)
+
+
 class QueryParams:
     """An container for generating query parameters."""
 
@@ -43,39 +104,27 @@ class QueryParams:
         if query is None:
             return
 
-        if isinstance(query, str):
-            self._query = [query]
-            if self._cql_re.match(query):
-                self._is_erm = False
-                self._is_cql = True
+        parser = _QueryParser(query)
 
-        if isinstance(query, (dict, httpx.QueryParams)):
-            # Queries and filters could be hiding
+        (q, is_cql) = parser.check_string()
+        if q is not None:
+            self._query = [q]
+        if is_cql:
+            self._is_erm = False
+            self._is_cql = True
 
-            if q := query.get("query"):
-                if not isinstance(q, str):
-                    msg = f"Unexpected value {q} for query parameter."
-                    raise ValueError(msg)
-                self._query = [q]
-                self._is_erm = False
-                self._is_cql = True
+        # Queries and filters could be hiding
+        cql_query = parser.check_query()
+        if cql_query is not None:
+            self._query = [cql_query]
+            self._is_erm = False
+            self._is_cql = True
 
-            if "filters" in query:
-                self._is_erm = True
-                self._is_cql = False
-
-                if isinstance(query, httpx.QueryParams):
-                    self._query = query.get_list("filters")
-                else:
-                    q = query["filters"]
-                    if isinstance(q, str):
-                        self._query = [q]
-                    elif isinstance(q, Sequence):
-                        self._query = list(cast("Sequence[str]", query["filters"]))
-
-                if not all(isinstance(v, str) for v in self._query):
-                    msg = f"Unexpected value {q} for filter parameter."
-                    raise ValueError(msg)
+        filters = parser.check_filters()
+        if filters is not None:
+            self._query = filters
+            self._is_erm = True
+            self._is_cql = False
 
     def normalized(self) -> httpx.QueryParams:
         """Parameters compatible with all FOLIO endpoints.
