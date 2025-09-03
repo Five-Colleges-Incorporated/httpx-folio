@@ -58,6 +58,8 @@ class IdPagingCases:
 
     @parametrize(
         query=[
+            {"query": "simple query sortBy id "},
+            {"query": "simple query"},
             "simple query sortBy id asc",
             "simple query sortBy id ASC",
             "simple query sortby id asc",
@@ -72,7 +74,7 @@ class IdPagingCases:
             "simple query SORTBY id/sort.ascending",
         ],
     )
-    def case_ascending_query_cql(self, query: QueryType) -> IdPagingCase:
+    def case_ascending_simple_query_cql(self, query: QueryType) -> IdPagingCase:
         return IdPagingCase(
             query=query,
             expected=httpx.QueryParams(
@@ -83,6 +85,29 @@ class IdPagingCases:
             expected_fifteenth_page=httpx.QueryParams(
                 f"query=id>{IdPagingCase.last_id} "
                 "and (simple query) sortBy id"
+                f"&limit={DEFAULT_PAGE_SIZE}",
+            ),
+        )
+
+    @parametrize(
+        query=[
+            {"query": "cql.allIndexes=fish"},
+            {"query": "cql.allIndexes=fish sortby id"},
+            "cql.allIndexes=fish",
+            "cql.allIndexes=fish sortby id",
+        ],
+    )
+    def case_ascending_cql_query(self, query: QueryType) -> IdPagingCase:
+        return IdPagingCase(
+            query=query,
+            expected=httpx.QueryParams(
+                f"query=id>{IdPagingCase.lowest_id} "
+                "and (cql.allIndexes=fish) sortBy id"
+                f"&limit={DEFAULT_PAGE_SIZE}",
+            ),
+            expected_fifteenth_page=httpx.QueryParams(
+                f"query=id>{IdPagingCase.last_id} "
+                "and (cql.allIndexes=fish) sortBy id"
                 f"&limit={DEFAULT_PAGE_SIZE}",
             ),
         )
