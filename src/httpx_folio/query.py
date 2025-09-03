@@ -34,8 +34,12 @@ class _SortType(IntEnum):
 
 
 class _QueryParser:
-    _cql_re = re.compile(
+    _standard_cql_re = re.compile(
         r"^(?:(.*cql\.)(allrecords)?(?:\s*=\s*1)?(.+)?|(?:.*sortby)).*$",
+        re.IGNORECASE,
+    )
+    _custom_cql_re = re.compile(
+        r"^(.*)sortby.*$",
         re.IGNORECASE,
     )
     _sort_re = re.compile(
@@ -47,15 +51,23 @@ class _QueryParser:
         self.query = query
 
     @staticmethod
-    def _check_str_default(q: str) -> tuple[bool, bool]:
-        if not (m := _QueryParser._cql_re.match(q)):
-            return (False, False)
+    def _check_str_default(q: str) -> tuple[str | None, bool, bool]:
+        if not (m := _QueryParser._standard_cql_re.match(q)):
+            return (None, False, False)
+
+        custom_cql = None
+        if (
+            (mc := _QueryParser._custom_cql_re.match(q))
+            and (qc := mc.group(1))
+            and isinstance(qc, str)
+        ):
+            custom_cql = qc.strip()
 
         if not (cql := m.group(1)) or not (d := m.group(2)):
-            return (True, False)
+            return (custom_cql, True, False)
 
         if not isinstance(cql, str) or not isinstance(d, str):
-            return (True, False)
+            return (custom_cql, True, False)
 
         sort = None
         if (s := m.group(3)) and isinstance(s, str):
@@ -64,36 +76,38 @@ class _QueryParser:
         if (cql.lower().strip() == "cql." and d.lower().strip() == "allrecords") and (
             sort is None or sort.lower().strip().startswith("sortby")
         ):
-            return (True, True)
+            return (None, True, True)
 
-        return (False, False)
+        return (None, False, False)
 
-    def check_string(self) -> tuple[str | None, bool, bool]:
+    def check_string(self) -> tuple[str | None, str | None, bool, bool]:
         if self.query is None or not isinstance(self.query, str):
-            return (None, False, False)
+            return (None, None, False, False)
 
         return (self.query, *self._check_str_default(self.query))
 
-    def check_query(self) -> tuple[str | None, bool, bool]:
+    def check_query(self) -> tuple[str | None, str | None, bool, bool]:
         if (
             not isinstance(self.query, (dict, httpx.QueryParams))
             or "query" not in self.query
         ):
-            return (None, False, False)
+            return (None, None, False, False)
 
         if isinstance(self.query, dict):
             if q := self.query["query"]:
                 if not isinstance(q, str):
                     msg = f"Unexpected value {q} for query parameter."
                     raise TypeError(msg)
-                return (q, True, self._check_str_default(q)[1])
-            return (None, False, False)
+                (qc, _, is_default) = self._check_str_default(q)
+                return (q, qc, True, is_default)
+            return (None, None, False, False)
 
         if qs := self.query.get_list("query"):
             if len(qs) == 0:
-                return (None, False, False)
+                return (None, None, False, False)
             if len(qs) == 1 and isinstance(qs[0], str):
-                return (qs[0], True, self._check_str_default(qs[0])[1])
+                (qc, _, is_default) = self._check_str_default(qs[0])
+                return (qs[0], qc, True, is_default)
 
         msg = f"Unexpected value {self.query['query']} for query parameter."
         raise ValueError(msg)
@@ -198,6 +212,7 @@ class QueryParams:
         self._is_cql: bool | None = None
         self._sort_type = _SortType.UNSORTED
         self._is_default = False
+        self._custom_cql = None
 
         if query is None:
             self._is_default = True
@@ -207,18 +222,22 @@ class QueryParams:
         parser = _QueryParser(query)
         self._additional_params = parser.additional_params()
 
-        (q, is_cql, is_default) = parser.check_string()
+        (q, qc, is_cql, is_default) = parser.check_string()
         if q is not None:
             self._query = [q]
+        if qc is not None:
+            self._custom_cql = qc
         if is_cql:
             self._is_erm = False
             self._is_cql = True
             self._is_default = is_default
 
         # Queries and filters could be hiding
-        (q, is_cql, is_default) = parser.check_query()
+        (q, qc, is_cql, is_default) = parser.check_query()
         if q is not None:
             self._query = [q]
+        if qc is not None:
+            self._custom_cql = qc
         if is_cql:
             self._is_erm = False
             self._is_cql = True
@@ -338,13 +357,22 @@ class QueryParams:
             else "00000000-0000-0000-0000-000000000000"
         )
 
-        if "query" in params:
-            q = "" if self._is_default else f" and ({params['query']})"
+        if self._is_cql is None or self._is_cql:
+            q = (
+                f"id<{last_id}"
+                if self._sort_type == _SortType.DESCENDING
+                else f"id>{last_id}"
+            )
+            if not self._is_default and self._custom_cql is not None:
+                q += f" and ({self._custom_cql})"
+            elif not self._is_default and len(self._query) == 1:
+                q += f" and ({self._query[0]})"
+
             params = params.set(
                 "query",
-                f"id<{last_id}{q} sortBy id/sort.descending"
+                f"{q} sortBy id/sort.descending"
                 if self._sort_type == _SortType.DESCENDING
-                else f"id>{last_id}{q} sortBy id",
+                else f"{q} sortBy id",
             )
 
         if self._is_erm is None or self._is_erm:

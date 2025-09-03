@@ -58,7 +58,41 @@ class IdPagingCases:
 
     @parametrize(
         query=[
+            "simple query sortBy id asc",
+            "simple query sortBy id ASC",
+            "simple query sortby id asc",
+            "simple query sortby id ASC",
+            "simple query SORTBY id asc",
+            "simple query SORTBY id ASC",
+            "simple query sortBy id/sort.ascending",
+            "simple query sortBy id/sort.asc",
+            "simple query sortby id/sort.ascending",
+            "simple query sortby id/sort.asc",
+            "simple query SORTBY id/sort.ascending",
+            "simple query SORTBY id/sort.ascending",
+        ],
+    )
+    def case_ascending_query_cql(self, query: QueryType) -> IdPagingCase:
+        return IdPagingCase(
+            query=query,
+            expected=httpx.QueryParams(
+                f"query=id>{IdPagingCase.lowest_id} "
+                "and (simple query) sortBy id"
+                f"&limit={DEFAULT_PAGE_SIZE}",
+            ),
+            expected_fifteenth_page=httpx.QueryParams(
+                f"query=id>{IdPagingCase.last_id} "
+                "and (simple query) sortBy id"
+                f"&limit={DEFAULT_PAGE_SIZE}",
+            ),
+        )
+
+    @parametrize(
+        query=[
             {"query": "cql.allRecords=1"},
+            {"query": "cql.allRecords = 1"},
+            "cql.allRecords=1",
+            "cql.allRecords = 1",
             "cql.allRecords=1 sortBy id asc",
             "cql.allRecords=1 sortBy id ASC",
             "cql.allRecords=1 sortby id asc",
