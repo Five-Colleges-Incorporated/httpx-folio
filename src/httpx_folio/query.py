@@ -102,7 +102,7 @@ class _QueryParser:
 
         return False
 
-    _reserved = frozenset({"query", "filters", "limit", "perPage", "stats"})
+    _reserved = frozenset({"query", "filters", "limit", "perPage", "offset", "stats"})
 
     def additional_params(self) -> httpx.QueryParams:
         if not isinstance(self.query, (dict, httpx.QueryParams)):
@@ -225,3 +225,14 @@ class QueryParams:
             params = params.set("perPage", 1)
 
         return params
+
+    def offset_paging(self, page: int | None = None) -> httpx.QueryParams:
+        """Parameters for a single page of results."""
+        params = self.normalized()
+        # add a sort so null records go to the end
+        if "query" in params and not self._is_sorted:
+            params = params.set("query", params["query"] + " sortBy id")
+        if ("sort" not in params) and (self._is_erm is None or self._is_erm):
+            params = params.add("sort", "id;asc")
+
+        return params.set("offset", (page or 0) * self._limit)
