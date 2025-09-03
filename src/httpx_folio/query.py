@@ -9,6 +9,7 @@ from typing import Union, cast
 import httpx
 
 DEFAULT_PAGE_SIZE = 100
+ERM_MAX_PERPAGE = 100
 
 QueryType = Union[
     str,
@@ -227,12 +228,23 @@ class QueryParams:
         return params
 
     def offset_paging(self, page: int | None = None) -> httpx.QueryParams:
-        """Parameters for a single page of results."""
+        """Parameters for a single page of results.
+
+        Paging by offset has performance issues for large offsets.
+        If possible use id_paging instead.
+        """
         params = self.normalized()
-        # add a sort so null records go to the end
+        # add a sort so results are pageable
         if "query" in params and not self._is_sorted:
             params = params.set("query", params["query"] + " sortBy id")
+
         if ("sort" not in params) and (self._is_erm is None or self._is_erm):
             params = params.add("sort", "id;asc")
+
+        if self._is_erm is None and self._limit > ERM_MAX_PERPAGE:
+            # ERM supports a max perPage of 100
+            # having a limit over 100 can not be normalized for offset paging
+            params = params.remove("sort")
+            params = params.remove("perPage")
 
         return params.set("offset", (page or 0) * self._limit)

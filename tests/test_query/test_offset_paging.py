@@ -7,10 +7,11 @@ from pytest_cases import parametrize_with_cases
 
 from httpx_folio.query import DEFAULT_PAGE_SIZE, QueryType
 
+from . import QueryParamCase
+
 
 @dataclass(frozen=True)
-class OffsetPagingCase:
-    expected_first_page: httpx.QueryParams
+class OffsetPagingCase(QueryParamCase):
     expected_fifteenth_page: httpx.QueryParams
     query: QueryType | None = None
     limit: int | None = None
@@ -19,7 +20,7 @@ class OffsetPagingCase:
 class OffsetPagingCases:
     def case_default(self) -> OffsetPagingCase:
         return OffsetPagingCase(
-            expected_first_page=httpx.QueryParams(
+            expected=httpx.QueryParams(
                 "query=cql.allRecords=1 sortBy id"
                 f"&limit={DEFAULT_PAGE_SIZE}&perPage={DEFAULT_PAGE_SIZE}"
                 "&stats=true&sort=id;asc&offset=0",
@@ -28,6 +29,32 @@ class OffsetPagingCases:
                 "query=cql.allRecords=1 sortBy id"
                 f"&limit={DEFAULT_PAGE_SIZE}&perPage={DEFAULT_PAGE_SIZE}"
                 f"&stats=true&sort=id;asc&offset={DEFAULT_PAGE_SIZE * 15}",
+            ),
+        )
+
+    def case_bigger_page_default(self) -> OffsetPagingCase:
+        return OffsetPagingCase(
+            limit=1000,
+            expected=httpx.QueryParams(
+                "query=cql.allRecords=1 sortBy id&limit=1000&stats=true&offset=0",
+            ),
+            expected_fifteenth_page=httpx.QueryParams(
+                "query=cql.allRecords=1 sortBy id&limit=1000&stats=true&offset=15000",
+            ),
+        )
+
+    def case_smaller_page_default(self) -> OffsetPagingCase:
+        return OffsetPagingCase(
+            limit=50,
+            expected=httpx.QueryParams(
+                "query=cql.allRecords=1 sortBy id"
+                "&limit=50&perPage=50"
+                "&stats=true&sort=id;asc&offset=0",
+            ),
+            expected_fifteenth_page=httpx.QueryParams(
+                "query=cql.allRecords=1 sortBy id"
+                "&limit=50&perPage=50"
+                "&stats=true&sort=id;asc&offset=750",
             ),
         )
 
@@ -40,7 +67,7 @@ def test_stats(tc: OffsetPagingCase) -> None:
         uut(tc.query) if tc.limit is None else uut(tc.query, tc.limit)
     ).offset_paging()
 
-    assert first_page == tc.expected_first_page
+    assert first_page == tc.expected
 
     nth_page = (
         uut(tc.query) if tc.limit is None else uut(tc.query, tc.limit)
