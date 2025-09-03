@@ -5,7 +5,7 @@ from dataclasses import dataclass
 import httpx
 from pytest_cases import parametrize, parametrize_with_cases
 
-from httpx_folio.query import DEFAULT_PAGE_SIZE, QueryType
+from httpx_folio.query import DEFAULT_PAGE_SIZE, ERM_MAX_PERPAGE, QueryType
 
 from . import QueryParamCase
 
@@ -104,8 +104,54 @@ class OffsetPagingCases:
             ),
         )
 
-    # cql, sortiness
-    # erm, sortiness & hard limit
+    def case_erm_unsorted(self) -> OffsetPagingCase:
+        return OffsetPagingCase(
+            query={"filters": "simple query"},
+            expected=httpx.QueryParams(
+                "filters=simple query"
+                f"&perPage={DEFAULT_PAGE_SIZE}"
+                "&stats=true&sort=id;asc&offset=0",
+            ),
+            expected_fifteenth_page=httpx.QueryParams(
+                "filters=simple query"
+                f"&perPage={DEFAULT_PAGE_SIZE}"
+                "&stats=true&sort=id;asc"
+                f"&offset={DEFAULT_PAGE_SIZE * 15}",
+            ),
+        )
+
+    def case_erm_sorted(self) -> OffsetPagingCase:
+        return OffsetPagingCase(
+            query={"filters": "simple query", "sort": "index;desc"},
+            expected=httpx.QueryParams(
+                "filters=simple query"
+                f"&perPage={DEFAULT_PAGE_SIZE}"
+                "&stats=true&sort=index;desc&offset=0",
+            ),
+            expected_fifteenth_page=httpx.QueryParams(
+                "filters=simple query"
+                f"&perPage={DEFAULT_PAGE_SIZE}"
+                "&stats=true&sort=index;desc"
+                f"&offset={DEFAULT_PAGE_SIZE * 15}",
+            ),
+        )
+
+    def case_erm_hardlimit(self) -> OffsetPagingCase:
+        return OffsetPagingCase(
+            query={"filters": "simple query"},
+            limit=1000,
+            expected=httpx.QueryParams(
+                "filters=simple query"
+                f"&perPage={ERM_MAX_PERPAGE}"
+                "&stats=true&sort=id;asc&offset=0",
+            ),
+            expected_fifteenth_page=httpx.QueryParams(
+                "filters=simple query"
+                f"&perPage={ERM_MAX_PERPAGE}"
+                "&stats=true&sort=id;asc"
+                f"&offset={ERM_MAX_PERPAGE * 15}",
+            ),
+        )
 
 
 @parametrize_with_cases("tc", cases=OffsetPagingCases)

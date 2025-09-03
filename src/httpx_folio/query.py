@@ -242,9 +242,15 @@ class QueryParams:
             params = params.add("sort", "id;asc")
 
         if self._is_erm is None and self._limit > ERM_MAX_PERPAGE:
-            # ERM supports a max perPage of 100
-            # having a limit over 100 can not be normalized for offset paging
+            # page size can't be normalized if it is over 100
             params = params.remove("sort")
             params = params.remove("perPage")
 
-        return params.set("offset", (page or 0) * self._limit)
+        limit = self._limit
+        if self._is_erm:
+            # ERM has a max page size of 100
+            # if we know we're paging ERM then we'll override the provided page size
+            limit = min(limit, ERM_MAX_PERPAGE)
+            params = params.set("perPage", limit)
+
+        return params.set("offset", (page or 0) * limit)
