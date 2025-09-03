@@ -10,6 +10,7 @@ import httpx
 
 DEFAULT_PAGE_SIZE = 100
 ERM_MAX_PERPAGE = 100
+CQL_ALL_RECORDS = "cql.allRecords=1"
 
 QueryType = Union[
     str,
@@ -187,7 +188,7 @@ class QueryParams:
                     # only some are ok without cql.allRecords but they're all ok with it
                     "query": self._query[0]
                     if len(self._query) == 1
-                    else "cql.allRecords=1",
+                    else CQL_ALL_RECORDS,
                     "limit": self._limit,
                 },
             )
@@ -254,3 +255,29 @@ class QueryParams:
             params = params.set("perPage", limit)
 
         return params.set("offset", (page or 0) * limit)
+
+    def id_paging(self, last_id: str | None = None) -> httpx.QueryParams:
+        """Parameters for a single page of results.
+
+        Paging by id is not supported for queries sorted on non-id columns
+        or for endpoints that do not have an id.
+        Use offset_paging instead.
+        """
+        params = self.normalized()
+
+        last_id = last_id or "00000000-0000-0000-0000-000000000000"
+
+        if "query" in params and params["query"] == CQL_ALL_RECORDS:
+            params = params.set(
+                "query",
+                f"id>{last_id} sortBy id",
+            )
+
+        if self._is_erm is None or self._is_erm:
+            params = params.set("sort", "id;asc")
+            params = params.add(
+                "filters",
+                f"id>{last_id}",
+            )
+
+        return params
