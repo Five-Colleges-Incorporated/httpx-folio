@@ -155,7 +155,7 @@ class OffsetPagingCases:
 
 
 @parametrize_with_cases("tc", cases=OffsetPagingCases)
-def test_stats(tc: OffsetPagingCase) -> None:
+def test_offset_paging(tc: OffsetPagingCase) -> None:
     from httpx_folio.query import QueryParams as uut
 
     first_page = (

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import re
 from collections.abc import Sequence
+from enum import IntEnum
 from typing import Union, cast
 
 import httpx
@@ -25,40 +26,74 @@ QueryType = Union[
 ]
 
 
+class _SortType(IntEnum):
+    UNSORTED = 0
+    NONSTANDARD = 1
+    ASCENDING = 2
+    DESCENDING = 4
+
+
 class _QueryParser:
-    _cql_re = re.compile(r"^.*sortby.*$", re.IGNORECASE)
-    _sort_re = re.compile(r"^.*sortby.*$", re.IGNORECASE)
+    _cql_re = re.compile(
+        r"^(?:(.*cql\.)(allrecords)?(?:\s*=\s*1)?(.+)?|(?:.*sortby)).*$",
+        re.IGNORECASE,
+    )
+    _sort_re = re.compile(
+        r"^.*sortby(?:\s+id(?:(?:(?:\/sort\.)|\s+)?((?:asc)|(?:desc))(?:ending)?)?)?.*$",
+        re.IGNORECASE,
+    )
 
     def __init__(self, query: QueryType):
         self.query = query
 
-    def check_string(self) -> tuple[str | None, bool]:
-        return (
-            (None, False)
-            if not isinstance(self.query, str)
-            else (self.query, self._cql_re.match(self.query) is not None)
-        )
+    @staticmethod
+    def _check_str_default(q: str) -> tuple[bool, bool]:
+        if not (m := _QueryParser._cql_re.match(q)):
+            return (False, False)
 
-    def check_query(self) -> str | None:
+        if not (cql := m.group(1)) or not (d := m.group(2)):
+            return (True, False)
+
+        if not isinstance(cql, str) or not isinstance(d, str):
+            return (True, False)
+
+        sort = None
+        if (s := m.group(3)) and isinstance(s, str):
+            sort = s
+
+        if (cql.lower().strip() == "cql." and d.lower().strip() == "allrecords") and (
+            sort is None or sort.lower().strip().startswith("sortby")
+        ):
+            return (True, True)
+
+        return (False, False)
+
+    def check_string(self) -> tuple[str | None, bool, bool]:
+        if self.query is None or not isinstance(self.query, str):
+            return (None, False, False)
+
+        return (self.query, *self._check_str_default(self.query))
+
+    def check_query(self) -> tuple[str | None, bool, bool]:
         if (
             not isinstance(self.query, (dict, httpx.QueryParams))
             or "query" not in self.query
         ):
-            return None
+            return (None, False, False)
 
         if isinstance(self.query, dict):
             if q := self.query["query"]:
                 if not isinstance(q, str):
                     msg = f"Unexpected value {q} for query parameter."
-                    raise ValueError(msg)
-                return q
-            return None
+                    raise TypeError(msg)
+                return (q, True, self._check_str_default(q)[1])
+            return (None, False, False)
 
         if qs := self.query.get_list("query"):
             if len(qs) == 0:
-                return None
+                return (None, False, False)
             if len(qs) == 1 and isinstance(qs[0], str):
-                return qs[0]
+                return (qs[0], True, self._check_str_default(qs[0])[1])
 
         msg = f"Unexpected value {self.query['query']} for query parameter."
         raise ValueError(msg)
@@ -84,25 +119,53 @@ class _QueryParser:
             return filters
 
         msg = f"Unexpected value {self.query['filters']} for filter parameter."
-        raise ValueError(msg)
+        raise TypeError(msg)
 
     def check_erm(self) -> bool:
         return (
             isinstance(self.query, (dict, httpx.QueryParams)) and "sort" in self.query
         )
 
-    def check_sort(self) -> bool:
+    @staticmethod
+    def _check_str_sort(q: str) -> _SortType:
+        if not (m := _QueryParser._sort_re.match(q)):
+            return _SortType.UNSORTED
+
+        if not (s := m.group(1)):
+            return _SortType.NONSTANDARD
+
+        if not isinstance(s, str):
+            msg = f"Unexpected value {s} for query parameter."
+            raise TypeError(msg)
+
+        if s.lower().strip() == "asc":
+            return _SortType.ASCENDING
+        if s.lower().strip() == "desc":
+            return _SortType.DESCENDING
+
+        return _SortType.NONSTANDARD
+
+    def check_sort(self) -> _SortType:
         if isinstance(self.query, str):
-            return self._sort_re.match(self.query) is not None
+            return _QueryParser._check_str_sort(self.query)
 
         if isinstance(self.query, (dict, httpx.QueryParams)):
             if q := self.query.get("query", None):
-                return isinstance(q, str) and self._sort_re.match(q) is not None
+                if not isinstance(q, str):
+                    msg = f"Unexpected value {q} for query parameter."
+                    raise TypeError(msg)
+                return _QueryParser._check_str_sort(q)
 
-            if "sort" in self.query:
-                return True
+            if s := self.query.get("sort", None):
+                if not isinstance(s, str):
+                    msg = f"Unexpected value {s} for sort parameter."
+                    raise TypeError(msg)
+                if s.lower().strip() == "id;asc":
+                    return _SortType.ASCENDING
+                if s.lower().strip() == "id;desc":
+                    return _SortType.DESCENDING
 
-        return False
+        return _SortType.UNSORTED
 
     _reserved = frozenset({"query", "filters", "limit", "perPage", "offset", "stats"})
 
@@ -133,28 +196,33 @@ class QueryParams:
         self._query: list[str] = []
         self._is_erm: bool | None = None
         self._is_cql: bool | None = None
-        self._is_sorted = False
+        self._sort_type = _SortType.UNSORTED
+        self._is_default = False
 
         if query is None:
+            self._is_default = True
             self._additional_params = httpx.QueryParams()
             return
 
         parser = _QueryParser(query)
         self._additional_params = parser.additional_params()
 
-        (q, is_cql) = parser.check_string()
+        (q, is_cql, is_default) = parser.check_string()
         if q is not None:
             self._query = [q]
         if is_cql:
             self._is_erm = False
             self._is_cql = True
+            self._is_default = is_default
 
         # Queries and filters could be hiding
-        cql_query = parser.check_query()
-        if cql_query is not None:
-            self._query = [cql_query]
+        (q, is_cql, is_default) = parser.check_query()
+        if q is not None:
+            self._query = [q]
+        if is_cql:
             self._is_erm = False
             self._is_cql = True
+            self._is_default = is_default
 
         filters = parser.check_filters()
         if filters is not None:
@@ -166,8 +234,7 @@ class QueryParams:
             self._is_erm = True
             self._is_cql = False
 
-        if parser.check_sort():
-            self._is_sorted = True
+        self._sort_type = parser.check_sort()
 
     def normalized(self) -> httpx.QueryParams:
         """Parameters compatible with all FOLIO endpoints.
@@ -215,7 +282,7 @@ class QueryParams:
         """
         params = self.normalized()
         # add a sort so null records go to the end
-        if "query" in params and not self._is_sorted:
+        if "query" in params and self._sort_type == _SortType.UNSORTED:
             params = params.set("query", params["query"] + " sortBy id")
         if ("sort" not in params) and (self._is_erm is None or self._is_erm):
             params = params.add("sort", "id;asc")
@@ -236,7 +303,7 @@ class QueryParams:
         """
         params = self.normalized()
         # add a sort so results are pageable
-        if "query" in params and not self._is_sorted:
+        if "query" in params and self._sort_type == _SortType.UNSORTED:
             params = params.set("query", params["query"] + " sortBy id")
 
         if ("sort" not in params) and (self._is_erm is None or self._is_erm):
@@ -265,19 +332,31 @@ class QueryParams:
         """
         params = self.normalized()
 
-        last_id = last_id or "00000000-0000-0000-0000-000000000000"
+        last_id = last_id or (
+            "99999999-9999-9999-9999-999999999999"
+            if self._sort_type == _SortType.DESCENDING
+            else "00000000-0000-0000-0000-000000000000"
+        )
 
-        if "query" in params and params["query"] == CQL_ALL_RECORDS:
+        if "query" in params:
+            q = "" if self._is_default else f" and ({params['query']})"
             params = params.set(
                 "query",
-                f"id>{last_id} sortBy id",
+                f"id<{last_id}{q} sortBy id/sort.descending"
+                if self._sort_type == _SortType.DESCENDING
+                else f"id>{last_id}{q} sortBy id",
             )
 
         if self._is_erm is None or self._is_erm:
-            params = params.set("sort", "id;asc")
+            params = params.set(
+                "sort",
+                "id;desc" if self._sort_type == _SortType.DESCENDING else "id;asc",
+            )
             params = params.add(
                 "filters",
-                f"id>{last_id}",
+                f"id<{last_id}"
+                if self._sort_type == _SortType.DESCENDING
+                else f"id>{last_id}",
             )
 
         return params
