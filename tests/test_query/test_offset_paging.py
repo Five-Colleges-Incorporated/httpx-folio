@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 import httpx
-from pytest_cases import parametrize_with_cases
+from pytest_cases import parametrize, parametrize_with_cases
 
 from httpx_folio.query import DEFAULT_PAGE_SIZE, QueryType
 
@@ -27,6 +27,21 @@ class OffsetPagingCases:
             ),
             expected_fifteenth_page=httpx.QueryParams(
                 "query=cql.allRecords=1 sortBy id"
+                f"&limit={DEFAULT_PAGE_SIZE}&perPage={DEFAULT_PAGE_SIZE}"
+                f"&stats=true&sort=id;asc&offset={DEFAULT_PAGE_SIZE * 15}",
+            ),
+        )
+
+    def case_simple_query(self) -> OffsetPagingCase:
+        return OffsetPagingCase(
+            query="simple query",
+            expected=httpx.QueryParams(
+                "query=simple query sortBy id&filters=simple query"
+                f"&limit={DEFAULT_PAGE_SIZE}&perPage={DEFAULT_PAGE_SIZE}"
+                "&stats=true&sort=id;asc&offset=0",
+            ),
+            expected_fifteenth_page=httpx.QueryParams(
+                "query=simple query sortBy id&filters=simple query"
                 f"&limit={DEFAULT_PAGE_SIZE}&perPage={DEFAULT_PAGE_SIZE}"
                 f"&stats=true&sort=id;asc&offset={DEFAULT_PAGE_SIZE * 15}",
             ),
@@ -57,6 +72,40 @@ class OffsetPagingCases:
                 "&stats=true&sort=id;asc&offset=750",
             ),
         )
+
+    def case_cql_unsorted(self) -> OffsetPagingCase:
+        return OffsetPagingCase(
+            query={"query": "simple query"},
+            expected=httpx.QueryParams(
+                f"query=simple query sortBy id&limit={DEFAULT_PAGE_SIZE}&offset=0",
+            ),
+            expected_fifteenth_page=httpx.QueryParams(
+                "query=simple query sortBy id"
+                f"&limit={DEFAULT_PAGE_SIZE}&offset={DEFAULT_PAGE_SIZE * 15}",
+            ),
+        )
+
+    @parametrize(
+        query=[
+            "simple query sortby index",
+            "simple query sortBy index",
+            "simple query SORTBY index",
+        ],
+    )
+    def case_cql_sorted(self, query: str) -> OffsetPagingCase:
+        return OffsetPagingCase(
+            query=query,
+            expected=httpx.QueryParams(
+                f"query={query}&limit={DEFAULT_PAGE_SIZE}&offset=0",
+            ),
+            expected_fifteenth_page=httpx.QueryParams(
+                f"query={query}"
+                f"&limit={DEFAULT_PAGE_SIZE}&offset={DEFAULT_PAGE_SIZE * 15}",
+            ),
+        )
+
+    # cql, sortiness
+    # erm, sortiness & hard limit
 
 
 @parametrize_with_cases("tc", cases=OffsetPagingCases)
