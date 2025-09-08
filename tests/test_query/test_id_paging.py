@@ -54,6 +54,26 @@ def cql_sortbyid_generator() -> Iterator[tuple[str | dict[str, str], bool, str]]
                     ad in asc,
                     q,
                 )
+                query = f"{q} {s} Id{ad}"
+                yield (
+                    query if q.startswith("cql") else {"query": query},
+                    ad in asc,
+                    q,
+                )
+
+
+def erm_sortbyid_generator() -> Iterator[tuple[dict[str, str | list[str]], bool, str]]:
+    for ad in ["asc", "desc"]:
+        yield (
+            {"filters": "some filter", "sort": f"id;{ad}"},
+            ad == "asc",
+            "filters=some filter",
+        )
+        yield (
+            {"filters": ["some", "filters"], "sort": f"id;{ad}"},
+            ad == "asc",
+            "filters=some&filters=filters",
+        )
 
 
 class IdPagingCases:
@@ -117,6 +137,34 @@ class IdPagingCases:
                 f"query=id<{IdPagingCase.last_id} and ({expected}) "
                 "sortBy id/sort.descending"
                 f"&limit={DEFAULT_PAGE_SIZE}",
+            ),
+        )
+
+    @parametrize(tc=list(erm_sortbyid_generator()))
+    def case_erm_sortbyid(self, tc: tuple[QueryType, bool, str]) -> IdPagingCase:
+        (query, is_asc, expected) = tc
+        if is_asc:
+            return IdPagingCase(
+                query=query,
+                expected=httpx.QueryParams(
+                    f"sort=id;asc&{expected}&filters=id>{IdPagingCase.lowest_id}"
+                    f"&perPage={DEFAULT_PAGE_SIZE}&stats=true",
+                ),
+                expected_fifteenth_page=httpx.QueryParams(
+                    f"sort=id;asc&{expected}&filters=id>{IdPagingCase.last_id}"
+                    f"&perPage={DEFAULT_PAGE_SIZE}&stats=true",
+                ),
+            )
+
+        return IdPagingCase(
+            query=query,
+            expected=httpx.QueryParams(
+                f"sort=id;desc&{expected}&filters=id<{IdPagingCase.highest_id}"
+                f"&perPage={DEFAULT_PAGE_SIZE}&stats=true",
+            ),
+            expected_fifteenth_page=httpx.QueryParams(
+                f"sort=id;desc&{expected}&filters=id<{IdPagingCase.last_id}"
+                f"&perPage={DEFAULT_PAGE_SIZE}&stats=true",
             ),
         )
 
