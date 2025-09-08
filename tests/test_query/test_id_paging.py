@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import ClassVar
+from typing import ClassVar, Iterator
 
 import httpx
 from pytest_cases import parametrize, parametrize_with_cases
@@ -22,8 +22,39 @@ class IdPagingCase(QueryParamCase):
     highest_id: ClassVar[str] = "99999999-9999-9999-9999-999999999999"
 
 
+def cql_sortbyid_generator() -> Iterator[tuple[QueryType, bool, str]]:
+    sorts = ["sortby", "SORTBY", "sortBy"]
+    asc = [
+        "",
+        " asc",
+        " ascending",
+        " ASC",
+        "/sort.ascending",
+        "/sort.asc",
+        "/SORT.ASCENDING",
+    ]
+    desc = [
+        " desc",
+        " descending",
+        " DESC",
+        "/sort.descending",
+        "/sort.desc",
+        "/SORT.DESCENDING",
+    ]
+    queries = ["some query", "cql.allRecords=1", "cql.allIndexes=fish"]
+    for s in sorts:
+        for q in queries:
+            for ad in [*asc, *desc]:
+                query = f"{q} {s} id{ad}"
+                yield (
+                    query if q.startswith("cql") else {"query": query},
+                    ad in asc,
+                    q,
+                )
+
+
 class IdPagingCases:
-    def case_default(self) -> IdPagingCase:
+    def case_indeterminate_default(self) -> IdPagingCase:
         return IdPagingCase(
             expected=httpx.QueryParams(
                 f"query=id>{IdPagingCase.lowest_id} sortBy id"
@@ -39,7 +70,7 @@ class IdPagingCases:
             ),
         )
 
-    def case_simple_query(self) -> IdPagingCase:
+    def case_indeterminate_simple_query(self) -> IdPagingCase:
         return IdPagingCase(
             query="simple query",
             expected=httpx.QueryParams(
@@ -56,119 +87,32 @@ class IdPagingCases:
             ),
         )
 
-    @parametrize(
-        query=[
-            {"query": "simple query sortBy id "},
-            {"query": "simple query"},
-            "simple query sortBy id asc",
-            "simple query sortBy id ASC",
-            "simple query sortby id asc",
-            "simple query sortby id ASC",
-            "simple query SORTBY id asc",
-            "simple query SORTBY id ASC",
-            "simple query sortBy id/sort.ascending",
-            "simple query sortBy id/sort.asc",
-            "simple query sortby id/sort.ascending",
-            "simple query sortby id/sort.asc",
-            "simple query SORTBY id/sort.ascending",
-            "simple query SORTBY id/sort.ascending",
-        ],
-    )
-    def case_ascending_simple_query_cql(self, query: QueryType) -> IdPagingCase:
-        return IdPagingCase(
-            query=query,
-            expected=httpx.QueryParams(
-                f"query=id>{IdPagingCase.lowest_id} "
-                "and (simple query) sortBy id"
-                f"&limit={DEFAULT_PAGE_SIZE}",
-            ),
-            expected_fifteenth_page=httpx.QueryParams(
-                f"query=id>{IdPagingCase.last_id} "
-                "and (simple query) sortBy id"
-                f"&limit={DEFAULT_PAGE_SIZE}",
-            ),
-        )
+    @parametrize(tc=list(cql_sortbyid_generator()))
+    def case_cql_sortbyid(self, tc: tuple[QueryType, bool, str]) -> IdPagingCase:
+        (query, is_asc, expected) = tc
+        if is_asc:
+            return IdPagingCase(
+                query=query,
+                expected=httpx.QueryParams(
+                    f"query=id>{IdPagingCase.lowest_id} and ({expected}) sortBy id"
+                    f"&limit={DEFAULT_PAGE_SIZE}",
+                ),
+                expected_fifteenth_page=httpx.QueryParams(
+                    f"query=id>{IdPagingCase.last_id} and ({expected}) sortBy id"
+                    f"&limit={DEFAULT_PAGE_SIZE}",
+                ),
+            )
 
-    @parametrize(
-        query=[
-            {"query": "cql.allIndexes=fish"},
-            {"query": "cql.allIndexes=fish sortby id"},
-            "cql.allIndexes=fish",
-            "cql.allIndexes=fish sortby id",
-        ],
-    )
-    def case_ascending_cql_query(self, query: QueryType) -> IdPagingCase:
         return IdPagingCase(
             query=query,
             expected=httpx.QueryParams(
-                f"query=id>{IdPagingCase.lowest_id} "
-                "and (cql.allIndexes=fish) sortBy id"
+                f"query=id<{IdPagingCase.highest_id} and ({expected}) "
+                "sortBy id/sort.descending"
                 f"&limit={DEFAULT_PAGE_SIZE}",
             ),
             expected_fifteenth_page=httpx.QueryParams(
-                f"query=id>{IdPagingCase.last_id} "
-                "and (cql.allIndexes=fish) sortBy id"
-                f"&limit={DEFAULT_PAGE_SIZE}",
-            ),
-        )
-
-    @parametrize(
-        query=[
-            {"query": "cql.allRecords=1"},
-            {"query": "cql.allRecords = 1"},
-            "cql.allRecords=1",
-            "cql.allRecords = 1",
-            "cql.allRecords=1 sortBy id asc",
-            "cql.allRecords=1 sortBy id ASC",
-            "cql.allRecords=1 sortby id asc",
-            "cql.allRecords=1 sortby id ASC",
-            "cql.allRecords=1 SORTBY id asc",
-            "cql.allRecords=1 SORTBY id ASC",
-            "cql.allRecords=1 sortBy id/sort.ascending",
-            "cql.allRecords=1 sortBy id/sort.asc",
-            "cql.allRecords=1 sortby id/sort.ascending",
-            "cql.allRecords=1 sortby id/sort.asc",
-            "cql.allRecords=1 SORTBY id/sort.ascending",
-            "cql.allRecords=1 SORTBY id/sort.ascending",
-        ],
-    )
-    def case_ascending_default_cql(self, query: QueryType) -> IdPagingCase:
-        return IdPagingCase(
-            query=query,
-            expected=httpx.QueryParams(
-                f"query=id>{IdPagingCase.lowest_id} sortBy id"
-                f"&limit={DEFAULT_PAGE_SIZE}",
-            ),
-            expected_fifteenth_page=httpx.QueryParams(
-                f"query=id>{IdPagingCase.last_id} sortBy id&limit={DEFAULT_PAGE_SIZE}",
-            ),
-        )
-
-    @parametrize(
-        query=[
-            "cql.allRecords=1 sortBy id desc",
-            "cql.allRecords=1 sortBy id DESC",
-            "cql.allRecords=1 sortby id desc",
-            "cql.allRecords=1 sortby id DESC",
-            "cql.allRecords=1 SORTBY id desc",
-            "cql.allRecords=1 SORTBY id DESC",
-            "cql.allRecords=1 sortBy id/sort.descending",
-            "cql.allRecords=1 sortBy id/sort.desc",
-            "cql.allRecords=1 sortby id/sort.descending",
-            "cql.allRecords=1 sortby id/sort.desc",
-            "cql.allRecords=1 SORTBY id/sort.descending",
-            "cql.allRecords=1 SORTBY id/sort.descending",
-        ],
-    )
-    def case_descending_default_cql(self, query: str) -> IdPagingCase:
-        return IdPagingCase(
-            query=query,
-            expected=httpx.QueryParams(
-                f"query=id<{IdPagingCase.highest_id} sortBy id/sort.descending"
-                f"&limit={DEFAULT_PAGE_SIZE}",
-            ),
-            expected_fifteenth_page=httpx.QueryParams(
-                f"query=id<{IdPagingCase.last_id} sortBy id/sort.descending"
+                f"query=id<{IdPagingCase.last_id} and ({expected}) "
+                "sortBy id/sort.descending"
                 f"&limit={DEFAULT_PAGE_SIZE}",
             ),
         )

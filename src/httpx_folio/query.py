@@ -211,11 +211,9 @@ class QueryParams:
         self._is_erm: bool | None = None
         self._is_cql: bool | None = None
         self._sort_type = _SortType.UNSORTED
-        self._is_default = False
         self._custom_cql = None
 
         if query is None:
-            self._is_default = True
             self._additional_params = httpx.QueryParams()
             return
 
@@ -230,7 +228,6 @@ class QueryParams:
         if is_cql:
             self._is_erm = False
             self._is_cql = True
-            self._is_default = is_default
 
         # Queries and filters could be hiding
         (q, qc, is_cql, is_default) = parser.check_query()
@@ -241,7 +238,6 @@ class QueryParams:
         if is_cql:
             self._is_erm = False
             self._is_cql = True
-            self._is_default = is_default
 
         filters = parser.check_filters()
         if filters is not None:
@@ -364,9 +360,9 @@ class QueryParams:
                 if self._sort_type == _SortType.DESCENDING
                 else f"id>{last_id}"
             )
-            if not self._is_default and self._custom_cql is not None:
+            if self._custom_cql is not None:
                 q += f" and ({self._custom_cql})"
-            elif not self._is_default and len(self._query) == 1:
+            elif len(self._query) == 1:
                 q += f" and ({self._query[0]})"
 
             params = params.set(
