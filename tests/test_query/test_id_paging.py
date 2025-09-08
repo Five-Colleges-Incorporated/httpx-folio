@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import ClassVar, Iterator
+from typing import TYPE_CHECKING, ClassVar
 
 import httpx
 from pytest_cases import parametrize, parametrize_with_cases
@@ -9,6 +9,9 @@ from pytest_cases import parametrize, parametrize_with_cases
 from httpx_folio.query import DEFAULT_PAGE_SIZE, QueryType
 
 from . import QueryParamCase
+
+if TYPE_CHECKING:
+    from collections.abc import Iterator
 
 
 @dataclass(frozen=True)
@@ -22,7 +25,7 @@ class IdPagingCase(QueryParamCase):
     highest_id: ClassVar[str] = "99999999-9999-9999-9999-999999999999"
 
 
-def cql_sortbyid_generator() -> Iterator[tuple[QueryType, bool, str]]:
+def cql_sortbyid_generator() -> Iterator[tuple[str | dict[str, str], bool, str]]:
     sorts = ["sortby", "SORTBY", "sortBy"]
     asc = [
         "",
