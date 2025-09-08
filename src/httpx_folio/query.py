@@ -330,6 +330,7 @@ class QueryParams:
 
         if self._is_erm is None and self._limit > ERM_MAX_PERPAGE:
             # page size can't be normalized if it is over 100
+            params = params.remove("stats")
             params = params.remove("sort")
             params = params.remove("perPage")
 

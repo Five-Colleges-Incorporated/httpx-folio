@@ -18,7 +18,7 @@ class OffsetPagingCase(QueryParamCase):
 
 
 class OffsetPagingCases:
-    def case_default(self) -> OffsetPagingCase:
+    def case_indeterminate_default(self) -> OffsetPagingCase:
         return OffsetPagingCase(
             expected=httpx.QueryParams(
                 "query=cql.allRecords=1 sortBy id"
@@ -32,7 +32,7 @@ class OffsetPagingCases:
             ),
         )
 
-    def case_simple_query(self) -> OffsetPagingCase:
+    def case_indeterminate_simple_query(self) -> OffsetPagingCase:
         return OffsetPagingCase(
             query="simple query",
             expected=httpx.QueryParams(
@@ -47,59 +47,79 @@ class OffsetPagingCases:
             ),
         )
 
-    def case_bigger_page_default(self) -> OffsetPagingCase:
+    def case_indeterminate_bigger_page(self) -> OffsetPagingCase:
         return OffsetPagingCase(
             limit=1000,
             expected=httpx.QueryParams(
-                "query=cql.allRecords=1 sortBy id&limit=1000&stats=true&offset=0",
+                "query=cql.allRecords=1 sortBy id&limit=1000&offset=0",
             ),
             expected_fifteenth_page=httpx.QueryParams(
-                "query=cql.allRecords=1 sortBy id&limit=1000&stats=true&offset=15000",
+                "query=cql.allRecords=1 sortBy id&limit=1000&offset=15000",
             ),
         )
 
-    def case_smaller_page_default(self) -> OffsetPagingCase:
+    def case_indeterminate_smaller_page(self) -> OffsetPagingCase:
         return OffsetPagingCase(
             limit=50,
             expected=httpx.QueryParams(
-                "query=cql.allRecords=1 sortBy id"
-                "&limit=50&perPage=50"
-                "&stats=true&sort=id;asc&offset=0",
+                "query=cql.allRecords=1 sortBy id&limit=50"
+                "&perPage=50&stats=true&sort=id;asc"
+                "&offset=0",
             ),
             expected_fifteenth_page=httpx.QueryParams(
-                "query=cql.allRecords=1 sortBy id"
-                "&limit=50&perPage=50"
-                "&stats=true&sort=id;asc&offset=750",
+                "query=cql.allRecords=1 sortBy id&limit=50"
+                "&perPage=50&stats=true&sort=id;asc"
+                "&offset=750",
             ),
         )
 
-    def case_cql_unsorted(self) -> OffsetPagingCase:
+    @parametrize(
+        query=[
+            {"query": "some query"},
+            "cql.allRecords=1",
+            "cql.allIndices=fish",
+        ],
+    )
+    def case_cql_unsorted(self, query: QueryType) -> OffsetPagingCase:
+        expected = query["query"] if isinstance(query, dict) else query
         return OffsetPagingCase(
-            query={"query": "simple query"},
+            query=query,
             expected=httpx.QueryParams(
-                f"query=simple query sortBy id&limit={DEFAULT_PAGE_SIZE}&offset=0",
+                f"query={expected} sortBy id&limit={DEFAULT_PAGE_SIZE}&offset=0",
             ),
             expected_fifteenth_page=httpx.QueryParams(
-                "query=simple query sortBy id"
+                f"query={expected} sortBy id"
                 f"&limit={DEFAULT_PAGE_SIZE}&offset={DEFAULT_PAGE_SIZE * 15}",
             ),
         )
 
     @parametrize(
         query=[
-            "simple query sortby index",
-            "simple query sortBy index",
-            "simple query SORTBY index",
+            {"query": "some query sortBy index"},
+            {"query": "some query SORTBY index"},
+            {"query": "some query sortby index"},
+            {"query": "some query sortby index asc"},
+            {"query": "some query sortby index desc"},
+            {"query": "some query sortby index/sort.asc"},
+            {"query": "some query sortby index/sort.desc"},
+            "cql.allRecords=1 sortBy index",
+            "cql.allIndices=fish SORTBY index",
+            "cql.allRecords=1 sortby index",
+            "cql.allIndices=fish sortby index asc",
+            "cql.allRecords=1 sortby index desc",
+            "cql.allIndices=fish sortby index/sort.asc",
+            "cql.allRecords=1 sortby index/sort.desc",
         ],
     )
-    def case_cql_sorted(self, query: str) -> OffsetPagingCase:
+    def case_cql_sorted(self, query: QueryType) -> OffsetPagingCase:
+        expected = query["query"] if isinstance(query, dict) else query
         return OffsetPagingCase(
             query=query,
             expected=httpx.QueryParams(
-                f"query={query}&limit={DEFAULT_PAGE_SIZE}&offset=0",
+                f"query={expected}&limit={DEFAULT_PAGE_SIZE}&offset=0",
             ),
             expected_fifteenth_page=httpx.QueryParams(
-                f"query={query}"
+                f"query={expected}"
                 f"&limit={DEFAULT_PAGE_SIZE}&offset={DEFAULT_PAGE_SIZE * 15}",
             ),
         )
