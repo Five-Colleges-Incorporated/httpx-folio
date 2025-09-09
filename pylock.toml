@@ -284,11 +284,11 @@ dependencies = [
 
 [[packages]]
 name = "httpx-retries"
-version = "0.4.1"
+version = "0.4.2"
 requires-python = ">=3.9"
-sdist = {name = "httpx_retries-0.4.1.tar.gz", url = "https://files.pythonhosted.org/packages/2a/cd/4aabdb837943ab1e890cd6104f84d35a94ae4ae0efb684d95792a1f16f45/httpx_retries-0.4.1.tar.gz", hashes = {sha256 = "008c10a57ee73665fa82bfa28466c736da5214b31ee6eacec8707c36493ed152"}}
+sdist = {name = "httpx_retries-0.4.2.tar.gz", url = "https://files.pythonhosted.org/packages/9e/32/37cd73ca29912cc572cec2a79b09cb719786d22e37bf02140bc750d34b36/httpx_retries-0.4.2.tar.gz", hashes = {sha256 = "8c32b781cf18dc9d67fc380792bf465cde107831ec1c1c504a7df6c80f06536c"}}
 wheels = [
-    {name = "httpx_retries-0.4.1-py3-none-any.whl",url = "https://files.pythonhosted.org/packages/40/72/a580f4ecfa22f59b7c3ecd551174cf46c78f4633c687d08eafeacb445144/httpx_retries-0.4.1-py3-none-any.whl",hashes = {sha256 = "756020a4d67eccea5785b30a27c0df413bda5f718b5e5847fa163b51e3348144"}},
+    {name = "httpx_retries-0.4.2-py3-none-any.whl",url = "https://files.pythonhosted.org/packages/a4/73/0700c81ad08787e2648de8ae69c046bdfee865216187bdd43cb2ba35b36c/httpx_retries-0.4.2-py3-none-any.whl",hashes = {sha256 = "0393e2ee1ab7a90aa748733cc8fe8ff722f21f282fc8f8780369089918cec994"}},
 ]
 marker = "\"default\" in dependency_groups"
 
