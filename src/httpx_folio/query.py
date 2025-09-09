@@ -40,8 +40,7 @@ class QueryParams:
         """Initializes a base set of query parameters to generate variations.
 
         Raises:
-            TypeError: If the query or filter string is not parseable.
-            ValueError: If the query or filter key is not parseable.
+            TypeError: If the query or filter key is not parseable as a string.
         """
         self._limit = limit
 
@@ -153,6 +152,11 @@ class QueryParams:
         Paging by offset has performance issues for large offsets.
         If possible use id_paging instead.
 
+        If the endpoint to be paged has no id field, a sort on another field
+        must be specified. Use stats() to determine whether the records
+        contain an id field. Calling offset_paging() in this scenario will appear
+        to succeed but may have missing or duplicated results.
+
         ERM has a hard maximum limit of 100 results which impacts this paging.
         If the current parameter set is known to be ERM then each page
         will have at most 100 records even if the limit was set higher.
@@ -192,8 +196,8 @@ class QueryParams:
         Paging by id is not supported for queries sorted on non-id fields. Use
         offset_paging instead, can_page_by_id() will tell you if id paging is supported.
 
-        Paging by id is not supported for endpoints that do not have id fields. Use
-        stats() to determine whether the records contain id fields. Calling
+        Paging by id is not supported for endpoints that do not have an id field. Use
+        stats() to determine whether the records contain an id field. Calling
         id_paging() in this scenario will appear to succeed
         but may have missing or duplicated results.
 
@@ -273,14 +277,13 @@ class _QueryParser:
         if not (m := _QueryParser._cql_re.match(q)):
             return (None, False)
 
-        base_query = None
         if (q := m.group(1)) and isinstance(q, str):
-            base_query = q.strip()
+            return (q.strip(), True)
 
         if (q := m.group(2)) and isinstance(q, str):
-            base_query = q.strip()
+            return (q.strip(), True)
 
-        return (base_query, True)
+        return (None, True)
 
     def check_string(self) -> tuple[str | None, str | None, bool | None]:
         if self.query is None or not isinstance(self.query, str):
@@ -309,7 +312,7 @@ class _QueryParser:
             return (qs[0], qc, True)
 
         msg = f"Unexpected value {self.query['query']} for query parameter."
-        raise ValueError(msg)
+        raise TypeError(msg)
 
     def check_filters(self) -> list[str] | None:
         if (
@@ -332,11 +335,11 @@ class _QueryParser:
             return filters
 
         msg = f"Unexpected value {self.query['filters']} for filter parameter."
-        raise ValueError(msg)
+        raise TypeError(msg)
 
     def check_erm(self) -> bool:
-        return (
-            isinstance(self.query, (dict, httpx.QueryParams)) and "sort" in self.query
+        return isinstance(self.query, (dict, httpx.QueryParams)) and (
+            "sort" in self.query or "filters" in self.query
         )
 
     @staticmethod

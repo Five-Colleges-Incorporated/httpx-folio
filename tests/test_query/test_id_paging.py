@@ -187,20 +187,20 @@ def test_id_paging(tc: IdPagingCase) -> None:
 
 @parametrize(
     query=[
-        "some query sortBy index"
-        "some query sortby index"
-        "some query SORTBY index"
-        "some query sortBy index asc"
-        "some query sortby index asc"
-        "some query SORTBY index asc"
-        "some query sortBy index/sort.ascending"
-        "some query sortby index/sort.ascending"
-        "some query SORTBY index/sort.ascending"
-        "some query sortBy index desc"
-        "some query sortby index desc"
-        "some query SORTBY index desc"
-        "some query sortBy index/sort.descending"
-        "some query sortby index/sort.descending"
+        "some query sortBy index",
+        "some query sortby index",
+        "some query SORTBY index",
+        "some query sortBy index asc",
+        "some query sortby index asc",
+        "some query SORTBY index asc",
+        "some query sortBy index/sort.ascending",
+        "some query sortby index/sort.ascending",
+        "some query SORTBY index/sort.ascending",
+        "some query sortBy index desc",
+        "some query sortby index desc",
+        "some query SORTBY index desc",
+        "some query sortBy index/sort.descending",
+        "some query sortby index/sort.descending",
         "some query SORTBY index/sort.descending",
         {"sort": "index;asc"},
         {"sort": "index;desc"},
