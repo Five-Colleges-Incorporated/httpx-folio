@@ -23,7 +23,7 @@ class IdPagingCase(QueryParamCase):
 
     lowest_id: ClassVar[str] = "00000000-0000-0000-0000-000000000000"
     last_id: ClassVar[str] = "a88e5d82-96f7-4d9f-b7d6-1504c3b26a3d"
-    highest_id: ClassVar[str] = "99999999-9999-9999-9999-999999999999"
+    highest_id: ClassVar[str] = "FFFFFFFF-FFFF-FFFF-FFFF-FFFFFFFFFFFF"
 
 
 def cql_sortbyid_generator() -> Iterator[tuple[str | dict[str, str], bool, str]]:

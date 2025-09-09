@@ -215,7 +215,7 @@ class QueryParams:
         params = self.normalized()
 
         last_id = last_id or (
-            "99999999-9999-9999-9999-999999999999"
+            "FFFFFFFF-FFFF-FFFF-FFFF-FFFFFFFFFFFF"
             if self._sort_type == _SortType.DESCENDING
             else "00000000-0000-0000-0000-000000000000"
         )
