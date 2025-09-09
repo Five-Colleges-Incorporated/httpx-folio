@@ -17,6 +17,12 @@ Please see [MIGRATING.md](./MIGRATING.md) for information on breaking changes.
 
 ### Removed
 
+## [0.2.1] - September 2025
+
+### Fixed
+- Fix offset paging to allow for non-id columns
+- Fix default_client_factory when urls with trailing slashes are passed
+
 ## [0.2.0] - September 2025
 
 ### Added
