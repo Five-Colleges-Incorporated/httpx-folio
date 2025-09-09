@@ -67,7 +67,7 @@ def default_client_factory(
         o = o or BasicClientOptions()
         return httpx.Client(
             auth=auth,
-            base_url=params.base_url,
+            base_url=params.base_url.rstrip("/"),
             transport=RetryTransport(
                 retry=Retry(
                     total=o.retries,
