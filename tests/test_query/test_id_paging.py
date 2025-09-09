@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING, ClassVar
 
 import httpx
+import pytest
 from pytest_cases import parametrize, parametrize_with_cases
 
 from httpx_folio.query import DEFAULT_PAGE_SIZE, QueryType
@@ -182,3 +183,35 @@ def test_id_paging(tc: IdPagingCase) -> None:
 
     nth_page = uut.id_paging(tc.last_id)
     assert nth_page == tc.expected_fifteenth_page
+
+
+@parametrize(
+    query=[
+        "some query sortBy index"
+        "some query sortby index"
+        "some query SORTBY index"
+        "some query sortBy index asc"
+        "some query sortby index asc"
+        "some query SORTBY index asc"
+        "some query sortBy index/sort.ascending"
+        "some query sortby index/sort.ascending"
+        "some query SORTBY index/sort.ascending"
+        "some query sortBy index desc"
+        "some query sortby index desc"
+        "some query SORTBY index desc"
+        "some query sortBy index/sort.descending"
+        "some query sortby index/sort.descending"
+        "some query SORTBY index/sort.descending",
+        {"sort": "index;asc"},
+        {"sort": "index;desc"},
+    ],
+)
+def test_id_paging_not_supported(query: QueryType) -> None:
+    from httpx_folio.query import QueryParams
+
+    uut = QueryParams(query)
+
+    assert not uut.can_page_by_id()
+
+    with pytest.raises(RuntimeError):
+        uut.id_paging()

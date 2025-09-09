@@ -158,6 +158,7 @@ class _QueryParser:
                     return _SortType.ASCENDING
                 if s.lower().strip() == "id;desc":
                     return _SortType.DESCENDING
+                return _SortType.NONSTANDARD
 
         return _SortType.UNSORTED
 
@@ -330,6 +331,13 @@ class QueryParams:
         or for endpoints that do not have an id.
         Use offset_paging instead.
         """
+        if not self.can_page_by_id():
+            msg = (
+                "Id Paging is not supported in the current parameter configuration."
+                "Use Offset Paging instead."
+            )
+            raise RuntimeError(msg)
+
         params = self.normalized()
 
         last_id = last_id or (
