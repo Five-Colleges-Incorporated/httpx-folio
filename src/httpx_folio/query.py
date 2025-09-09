@@ -146,15 +146,16 @@ class QueryParams:
 
         return params
 
-    def offset_paging(self, page: int = 1) -> httpx.QueryParams:
+    def offset_paging(self, *, key: str = "id", page: int = 1) -> httpx.QueryParams:
         """Parameters for a single one-based page of results.
 
         Paging by offset has performance issues for large offsets.
         If possible use id_paging instead.
 
-        If the endpoint to be paged has no id field, a sort on another field
-        must be specified. Use stats() to determine whether the records
-        contain an id field. Calling offset_paging() in this scenario will appear
+        If the endpoint to be paged has no id field, key should be specified if
+        the underlying query is unsorted. Use stats() to determine whether the records
+        contain an id field and to find a new key field if necessary.
+        Calling offset_paging() in this scenario without a key or a sort will appear
         to succeed but may have missing or duplicated results.
 
         ERM has a hard maximum limit of 100 results which impacts this paging.
@@ -166,10 +167,10 @@ class QueryParams:
         params = self.normalized()
         # add a sort so results are pageable
         if "query" in params and self._sort_type == _SortType.UNSORTED:
-            params = params.set("query", params["query"] + " sortBy id")
+            params = params.set("query", f"{params['query']} sortBy {key}")
 
         if ("sort" not in params) and (self._is_erm is None or self._is_erm):
-            params = params.add("sort", "id;asc")
+            params = params.add("sort", f"{key};asc")
 
         if self._is_erm is None and self._limit > ERM_MAX_PERPAGE:
             # page size can't be normalized if it is over 100
@@ -190,7 +191,7 @@ class QueryParams:
         """Indicates whether the current set of parameters supports id_paging."""
         return self._sort_type != _SortType.NONSTANDARD
 
-    def id_paging(self, last_id: str | None = None) -> httpx.QueryParams:
+    def id_paging(self, *, last_id: str | None = None) -> httpx.QueryParams:
         """Parameters for a single page of results.
 
         Paging by id is not supported for queries sorted on non-id fields. Use

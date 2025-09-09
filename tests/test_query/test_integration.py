@@ -64,7 +64,7 @@ class TestIntegration:
             j = res.json()
             id1 = j[next(iter(j.keys()))][-1]["id"]
 
-            res = client.get(tc.endpoint, params=op.offset_paging(2))
+            res = client.get(tc.endpoint, params=op.offset_paging(page=2))
             res.raise_for_status()
             j = res.json()
             id2 = j[next(iter(j.keys()))][0]["id"]
