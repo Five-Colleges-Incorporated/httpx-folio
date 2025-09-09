@@ -17,6 +17,11 @@ Please see [MIGRATING.md](./MIGRATING.md) for information on breaking changes.
 
 ### Removed
 
+## [0.2.3] - September 2025
+
+### Fixed
+- Fix id paging when descending
+
 ## [0.2.2] - September 2025
 
 ### Fixed
