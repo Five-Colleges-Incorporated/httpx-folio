@@ -181,7 +181,7 @@ def test_id_paging(tc: IdPagingCase) -> None:
     first_page = uut.id_paging()
     assert first_page == tc.expected
 
-    nth_page = uut.id_paging(tc.last_id)
+    nth_page = uut.id_paging(last_id=tc.last_id)
     assert nth_page == tc.expected_fifteenth_page
 
 

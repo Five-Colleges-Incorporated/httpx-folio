@@ -15,6 +15,7 @@ class OffsetPagingCase(QueryParamCase):
     expected_fifteenth_page: httpx.QueryParams
     query: QueryType | None = None
     limit: int | None = None
+    key: str | None = None
 
 
 class OffsetPagingCases:
@@ -95,6 +96,27 @@ class OffsetPagingCases:
 
     @parametrize(
         query=[
+            {"query": "some query"},
+            "cql.allRecords=1",
+            "cql.allIndices=fish",
+        ],
+    )
+    def case_cql_unsorted_no_id(self, query: QueryType) -> OffsetPagingCase:
+        expected = query["query"] if isinstance(query, dict) else query
+        return OffsetPagingCase(
+            query=query,
+            key="index",
+            expected=httpx.QueryParams(
+                f"query={expected} sortBy index&limit={DEFAULT_PAGE_SIZE}&offset=0",
+            ),
+            expected_fifteenth_page=httpx.QueryParams(
+                f"query={expected} sortBy index"
+                f"&limit={DEFAULT_PAGE_SIZE}&offset={DEFAULT_PAGE_SIZE * 14}",
+            ),
+        )
+
+    @parametrize(
+        query=[
             {"query": "some query sortBy index"},
             {"query": "some query SORTBY index"},
             {"query": "some query sortby index"},
@@ -115,6 +137,7 @@ class OffsetPagingCases:
         expected = query["query"] if isinstance(query, dict) else query
         return OffsetPagingCase(
             query=query,
+            key="xedni",  # ignored because a sort is specified
             expected=httpx.QueryParams(
                 f"query={expected}&limit={DEFAULT_PAGE_SIZE}&offset=0",
             ),
@@ -140,9 +163,27 @@ class OffsetPagingCases:
             ),
         )
 
+    def case_erm_unsorted_no_id(self) -> OffsetPagingCase:
+        return OffsetPagingCase(
+            query={"filters": "simple query"},
+            key="index",
+            expected=httpx.QueryParams(
+                "filters=simple query"
+                f"&perPage={DEFAULT_PAGE_SIZE}"
+                "&stats=true&sort=index;asc&offset=0",
+            ),
+            expected_fifteenth_page=httpx.QueryParams(
+                "filters=simple query"
+                f"&perPage={DEFAULT_PAGE_SIZE}"
+                "&stats=true&sort=index;asc"
+                f"&offset={DEFAULT_PAGE_SIZE * 14}",
+            ),
+        )
+
     def case_erm_sorted(self) -> OffsetPagingCase:
         return OffsetPagingCase(
             query={"filters": "simple query", "sort": "index;desc"},
+            key="xedni",  # ignored because a sort is specified
             expected=httpx.QueryParams(
                 "filters=simple query"
                 f"&perPage={DEFAULT_PAGE_SIZE}"
@@ -176,15 +217,18 @@ class OffsetPagingCases:
 
 @parametrize_with_cases("tc", cases=OffsetPagingCases)
 def test_offset_paging(tc: OffsetPagingCase) -> None:
-    from httpx_folio.query import QueryParams as uut
+    from httpx_folio.query import QueryParams
 
+    uut = QueryParams(tc.query) if tc.limit is None else QueryParams(tc.query, tc.limit)
     first_page = (
-        uut(tc.query) if tc.limit is None else uut(tc.query, tc.limit)
-    ).offset_paging()
+        uut.offset_paging() if tc.key is None else uut.offset_paging(key=tc.key)
+    )
 
     assert first_page == tc.expected
 
     nth_page = (
-        uut(tc.query) if tc.limit is None else uut(tc.query, tc.limit)
-    ).offset_paging(page=15)
+        uut.offset_paging(page=15)
+        if tc.key is None
+        else uut.offset_paging(key=tc.key, page=15)
+    )
     assert nth_page == tc.expected_fifteenth_page
