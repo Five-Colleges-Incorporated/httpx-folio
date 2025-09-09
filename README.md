@@ -14,11 +14,11 @@ Instead it is taking a minimalist approach to configuring a raw HTTPX client for
 If you can use a higher-level client to accomplish your goal you will have a better time using one.
 For all other times httpx-folio is here for you.
 
-As of 0.1.0 it supports
+As of 0.2.0 it supports
 * [Sync] Okapi and Eureka with a single tenant
+* Query and paging parameter handling
 
 Future
-* CQL, sort, and query parameter standardization across endpoints
 * [Async] Okapi and Eureka with a single tenant
 * [(A)Sync] Okapi and Eureka with ECS support
 * [(A)Sync] Edge with a single tenant and ECS support
