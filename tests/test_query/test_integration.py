@@ -50,11 +50,36 @@ class TestIntegration:
 
             j = res.json()
             assert j["totalRecords"] > 1
-            assert len(j[next(iter(j.keys()))])
 
             res = client.get(tc.endpoint, params=uut(tc.query).stats())
             res.raise_for_status()
 
             j = res.json()
             assert j["totalRecords"] > 1
-            assert len(j[next(iter(j.keys()))])
+            assert len(j[next(iter(j.keys()))]) == 1
+
+            op = uut(tc.query, limit=2)
+            res = client.get(tc.endpoint, params=op.offset_paging())
+            res.raise_for_status()
+            j = res.json()
+            id1 = j[next(iter(j.keys()))][-1]["id"]
+
+            res = client.get(tc.endpoint, params=op.offset_paging(2))
+            res.raise_for_status()
+            j = res.json()
+            id2 = j[next(iter(j.keys()))][0]["id"]
+
+            assert id1 < id2
+
+            ip = uut(tc.query, limit=2)
+            res = client.get(tc.endpoint, params=ip.id_paging())
+            res.raise_for_status()
+            j = res.json()
+            id1 = j[next(iter(j.keys()))][-1]["id"]
+
+            res = client.get(tc.endpoint, params=ip.id_paging(last_id=id1))
+            res.raise_for_status()
+            j = res.json()
+            id2 = j[next(iter(j.keys()))][0]["id"]
+
+            assert id1 < id2

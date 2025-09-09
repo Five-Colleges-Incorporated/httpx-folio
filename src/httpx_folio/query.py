@@ -291,7 +291,7 @@ class QueryParams:
 
         return params
 
-    def offset_paging(self, page: int | None = None) -> httpx.QueryParams:
+    def offset_paging(self, page: int = 1) -> httpx.QueryParams:
         """Parameters for a single page of results.
 
         Paging by offset has performance issues for large offsets.
@@ -318,7 +318,7 @@ class QueryParams:
             limit = min(limit, ERM_MAX_PERPAGE)
             params = params.set("perPage", limit)
 
-        return params.set("offset", (page or 0) * limit)
+        return params.set("offset", (page - 1) * limit)
 
     def can_page_by_id(self) -> bool:
         """Indicates whether the current set of parameters supports id_paging."""

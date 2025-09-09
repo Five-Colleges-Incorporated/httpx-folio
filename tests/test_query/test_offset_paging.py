@@ -28,7 +28,7 @@ class OffsetPagingCases:
             expected_fifteenth_page=httpx.QueryParams(
                 "query=cql.allRecords=1 sortBy id"
                 f"&limit={DEFAULT_PAGE_SIZE}&perPage={DEFAULT_PAGE_SIZE}"
-                f"&stats=true&sort=id;asc&offset={DEFAULT_PAGE_SIZE * 15}",
+                f"&stats=true&sort=id;asc&offset={DEFAULT_PAGE_SIZE * 14}",
             ),
         )
 
@@ -43,7 +43,7 @@ class OffsetPagingCases:
             expected_fifteenth_page=httpx.QueryParams(
                 "query=simple query sortBy id&filters=simple query"
                 f"&limit={DEFAULT_PAGE_SIZE}&perPage={DEFAULT_PAGE_SIZE}"
-                f"&stats=true&sort=id;asc&offset={DEFAULT_PAGE_SIZE * 15}",
+                f"&stats=true&sort=id;asc&offset={DEFAULT_PAGE_SIZE * 14}",
             ),
         )
 
@@ -54,7 +54,7 @@ class OffsetPagingCases:
                 "query=cql.allRecords=1 sortBy id&limit=1000&offset=0",
             ),
             expected_fifteenth_page=httpx.QueryParams(
-                "query=cql.allRecords=1 sortBy id&limit=1000&offset=15000",
+                "query=cql.allRecords=1 sortBy id&limit=1000&offset=14000",
             ),
         )
 
@@ -69,7 +69,7 @@ class OffsetPagingCases:
             expected_fifteenth_page=httpx.QueryParams(
                 "query=cql.allRecords=1 sortBy id&limit=50"
                 "&perPage=50&stats=true&sort=id;asc"
-                "&offset=750",
+                "&offset=700",
             ),
         )
 
@@ -89,7 +89,7 @@ class OffsetPagingCases:
             ),
             expected_fifteenth_page=httpx.QueryParams(
                 f"query={expected} sortBy id"
-                f"&limit={DEFAULT_PAGE_SIZE}&offset={DEFAULT_PAGE_SIZE * 15}",
+                f"&limit={DEFAULT_PAGE_SIZE}&offset={DEFAULT_PAGE_SIZE * 14}",
             ),
         )
 
@@ -120,7 +120,7 @@ class OffsetPagingCases:
             ),
             expected_fifteenth_page=httpx.QueryParams(
                 f"query={expected}"
-                f"&limit={DEFAULT_PAGE_SIZE}&offset={DEFAULT_PAGE_SIZE * 15}",
+                f"&limit={DEFAULT_PAGE_SIZE}&offset={DEFAULT_PAGE_SIZE * 14}",
             ),
         )
 
@@ -136,7 +136,7 @@ class OffsetPagingCases:
                 "filters=simple query"
                 f"&perPage={DEFAULT_PAGE_SIZE}"
                 "&stats=true&sort=id;asc"
-                f"&offset={DEFAULT_PAGE_SIZE * 15}",
+                f"&offset={DEFAULT_PAGE_SIZE * 14}",
             ),
         )
 
@@ -152,7 +152,7 @@ class OffsetPagingCases:
                 "filters=simple query"
                 f"&perPage={DEFAULT_PAGE_SIZE}"
                 "&stats=true&sort=index;desc"
-                f"&offset={DEFAULT_PAGE_SIZE * 15}",
+                f"&offset={DEFAULT_PAGE_SIZE * 14}",
             ),
         )
 
@@ -169,7 +169,7 @@ class OffsetPagingCases:
                 "filters=simple query"
                 f"&perPage={ERM_MAX_PERPAGE}"
                 "&stats=true&sort=id;asc"
-                f"&offset={ERM_MAX_PERPAGE * 15}",
+                f"&offset={ERM_MAX_PERPAGE * 14}",
             ),
         )
 
