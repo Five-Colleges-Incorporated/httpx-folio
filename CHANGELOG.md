@@ -17,6 +17,11 @@ Please see [MIGRATING.md](./MIGRATING.md) for information on breaking changes.
 
 ### Removed
 
+## [0.2.2] - September 2025
+
+### Fixed
+- Add py.typed file
+
 ## [0.2.1] - September 2025
 
 ### Fixed

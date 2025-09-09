@@ -1,6 +1,6 @@
 [project]
 name = "httpx-folio"
-version = "0.2.1"
+version = "0.2.2"
 description = "FOLIO related niceties for the next generation HTTP client for Python"
 authors = [
     {name = "Katherine Bargar", email = "kbargar@fivecolleges.edu"},
