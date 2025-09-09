@@ -171,15 +171,14 @@ class IdPagingCases:
 
 @parametrize_with_cases("tc", cases=IdPagingCases)
 def test_id_paging(tc: IdPagingCase) -> None:
-    from httpx_folio.query import QueryParams as uut
+    from httpx_folio.query import QueryParams
 
-    first_page = (
-        uut(tc.query) if tc.limit is None else uut(tc.query, tc.limit)
-    ).id_paging()
+    uut = QueryParams(tc.query) if tc.limit is None else QueryParams(tc.query, tc.limit)
 
+    assert uut.can_page_by_id()
+
+    first_page = uut.id_paging()
     assert first_page == tc.expected
 
-    nth_page = (
-        uut(tc.query) if tc.limit is None else uut(tc.query, tc.limit)
-    ).id_paging(tc.last_id)
+    nth_page = uut.id_paging(tc.last_id)
     assert nth_page == tc.expected_fifteenth_page

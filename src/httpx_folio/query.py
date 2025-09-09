@@ -39,7 +39,7 @@ class _QueryParser:
         re.IGNORECASE,
     )
     _sort_re = re.compile(
-        r"^.*sortby(?:\s+id(?:(?:(?:\/sort\.)|\s+)?((?:asc)|(?:desc))(?:ending)?)?)?.*$",
+        r"^.*sortby(?:\s+(id)(?:(?:(?:\/sort\.)|\s+)?((?:asc)|(?:desc))(?:ending)?)?)?.*$",
         re.IGNORECASE,
     )
 
@@ -122,8 +122,11 @@ class _QueryParser:
         if not (m := _QueryParser._sort_re.match(q)):
             return _SortType.UNSORTED
 
-        if not (s := m.group(1)):
+        if not m.group(1):
             return _SortType.NONSTANDARD
+
+        if not (s := m.group(2)):
+            return _SortType.ASCENDING
 
         if not isinstance(s, str):
             msg = f"Unexpected value {s} for query parameter."
@@ -315,6 +318,10 @@ class QueryParams:
             params = params.set("perPage", limit)
 
         return params.set("offset", (page or 0) * limit)
+
+    def can_page_by_id(self) -> bool:
+        """Indicates whether the current set of parameters supports id_paging."""
+        return self._sort_type != _SortType.NONSTANDARD
 
     def id_paging(self, last_id: str | None = None) -> httpx.QueryParams:
         """Parameters for a single page of results.
