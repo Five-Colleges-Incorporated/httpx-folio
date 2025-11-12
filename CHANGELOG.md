@@ -17,6 +17,11 @@ Please see [MIGRATING.md](./MIGRATING.md) for information on breaking changes.
 
 ### Removed
 
+## [0.3.0] - November 2025
+
+### Added
+- Additional path parameter to determine whether an endpoint supports id paging
+
 ## [0.2.3] - September 2025
 
 ### Fixed

@@ -187,9 +187,22 @@ class QueryParams:
 
         return params.set("offset", (page - 1) * limit)
 
-    def can_page_by_id(self) -> bool:
-        """Indicates whether the current set of parameters supports id_paging."""
-        return self._sort_type != _SortType.NONSTANDARD
+    _NONSTANDARD_PAGING = frozenset(
+        {
+            "/calendar/calendars",
+        },
+    )
+
+    def can_page_by_id(self, path: str | None = None) -> bool:
+        """Indicates whether the current set of parameters supports id_paging.
+
+        There are some endpoints in FOLIO that are known to not support id paging.
+        These endpoints either succeed with incorrect results or infinitely page.
+        You can pass the path you intend to page to check against the known list.
+        """
+        return (
+            path is None or path not in self._NONSTANDARD_PAGING
+        ) and self._sort_type != _SortType.NONSTANDARD
 
     def id_paging(self, *, last_id: str | None = None) -> httpx.QueryParams:
         """Parameters for a single page of results.
