@@ -9,6 +9,7 @@ from pytest_cases import parametrize_with_cases
 class IntegrationOkTestCase:
     endpoint: str
     query: str | None = None
+    comp: str = "id"
 
 
 class IntegrationOkTestCases:
@@ -21,11 +22,17 @@ class IntegrationOkTestCases:
     def case_nonerm_query(self) -> IntegrationOkTestCase:
         return IntegrationOkTestCase(
             "/coursereserves/courses",
-            'department.name = "German Studies"',
+            query='department.name = "German Studies"',
         )
 
     def case_erm_query(self) -> IntegrationOkTestCase:
-        return IntegrationOkTestCase("/erm/org", "name=~A")
+        return IntegrationOkTestCase("/erm/org", query="name=~A")
+
+    def case_calendars(self) -> IntegrationOkTestCase:
+        return IntegrationOkTestCase(
+            "/calendar/calendars",
+            comp="startDate",
+        )
 
 
 class TestIntegration:
@@ -62,24 +69,25 @@ class TestIntegration:
             res = client.get(tc.endpoint, params=op.offset_paging())
             res.raise_for_status()
             j = res.json()
-            id1 = j[next(iter(j.keys()))][-1]["id"]
+            comp1 = j[next(iter(j.keys()))][-1][tc.comp]
 
             res = client.get(tc.endpoint, params=op.offset_paging(page=2))
             res.raise_for_status()
             j = res.json()
-            id2 = j[next(iter(j.keys()))][0]["id"]
+            comp2 = j[next(iter(j.keys()))][0][tc.comp]
 
-            assert id1 < id2
+            assert comp1 < comp2
 
             ip = uut(tc.query, limit=2)
-            res = client.get(tc.endpoint, params=ip.id_paging())
-            res.raise_for_status()
-            j = res.json()
-            id1 = j[next(iter(j.keys()))][-1]["id"]
+            if ip.can_page_by_id(path=tc.endpoint):
+                res = client.get(tc.endpoint, params=ip.id_paging())
+                res.raise_for_status()
+                j = res.json()
+                comp1 = j[next(iter(j.keys()))][-1][tc.comp]
 
-            res = client.get(tc.endpoint, params=ip.id_paging(last_id=id1))
-            res.raise_for_status()
-            j = res.json()
-            id2 = j[next(iter(j.keys()))][0]["id"]
+                res = client.get(tc.endpoint, params=ip.id_paging(last_id=comp1))
+                res.raise_for_status()
+                j = res.json()
+                comp2 = j[next(iter(j.keys()))][0][tc.comp]
 
-            assert id1 < id2
+                assert comp1 < comp2

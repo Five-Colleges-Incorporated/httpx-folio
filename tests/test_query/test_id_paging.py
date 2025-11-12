@@ -215,3 +215,16 @@ def test_id_paging_not_supported(query: QueryType) -> None:
 
     with pytest.raises(RuntimeError):
         uut.id_paging()
+
+
+@parametrize(
+    path=[
+        "/calendar/calendars",
+    ],
+)
+def test_id_paging_not_recommended(path: str) -> None:
+    from httpx_folio.query import QueryParams
+
+    uut = QueryParams(None)
+
+    assert not uut.can_page_by_id(path)
