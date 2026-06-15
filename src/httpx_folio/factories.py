@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from http import HTTPStatus
 from typing import Protocol
 
 import httpx
@@ -72,6 +73,13 @@ def default_client_factory(
                 retry=Retry(
                     total=o.retries,
                     backoff_factor=0.5,
+                    status_forcelist=[
+                        *Retry.RETRYABLE_STATUS_CODES,
+                        # Eureka systems mask the true underlying error with 403
+                        # To be fixed in Trillium SP1
+                        # https://folio-org.atlassian.net/browse/MODSIDECAR-192
+                        HTTPStatus.FORBIDDEN,
+                    ],
                 ),
             ),
             timeout=o.timeout,
