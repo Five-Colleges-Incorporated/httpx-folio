@@ -17,6 +17,11 @@ Please see [MIGRATING.md](./MIGRATING.md) for information on breaking changes.
 
 ### Removed
 
+## [0.3.1] - August 2026
+
+### Fixed
+- Retry on 403 because of FOLIO Eureka behavior: https://folio-org.atlassian.net/browse/MODSIDECAR-192
+
 ## [0.3.0] - November 2025
 
 ### Added
